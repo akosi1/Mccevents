@@ -12,9 +12,9 @@
             </h2>
             <p class="text-muted mb-0">{{ $events->total() }} total events</p>
         </div>
-        <a href="{{ route('admin.events.create') }}" class="btn btn-primary">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createEventModal">
             <i class="fas fa-plus me-2"></i>Add Event
-        </a>
+        </button>
     </div>
 
     <!-- Filters -->
@@ -38,7 +38,7 @@
                 <div class="col-md-3">
                     <select class="form-select" name="department" onchange="this.form.submit()">
                         <option value="">All Departments</option>
-                        @foreach(\App\Models\Event::DEPARTMENTS as $code => $name)
+                        @foreach(['BSIT' => 'Bachelor of Science in Information Technology', 'BSBA' => 'Bachelor of Science in Business Administration', 'BSED' => 'Bachelor of Science in Education', 'BEED' => 'Bachelor of Elementary Education', 'BSHM' => 'Bachelor of Science in Hospitality Management'] as $code => $name)
                             <option value="{{ $code }}" {{ request('department') == $code ? 'selected' : '' }}>
                                 {{ $code }}
                             </option>
@@ -132,22 +132,16 @@
                                 <span class="text-muted" title="{{ $event->location }}">{{ Str::limit($event->location, 20) }}</span>
                             </td>
                             <td class="py-3 align-middle text-center">
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <a href="{{ route('admin.events.show', $event) }}" 
-                                       class="btn btn-outline-info" title="View">
+                                <div class="action-buttons d-flex justify-content-center gap-1">
+                                    <button class="btn btn-clean btn-view" title="View" onclick="viewEvent({{ $event->id }})">
                                         <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{{ route('admin.events.edit', $event) }}" 
-                                       class="btn btn-outline-warning" title="Edit">
+                                    </button>
+                                    <button class="btn btn-clean btn-edit" title="Edit" onclick="editEvent({{ $event->id }})" data-bs-toggle="modal" data-bs-target="#editEventModal">
                                         <i class="fas fa-edit"></i>
-                                    </a>
-                                    <form action="{{ route('admin.events.destroy', $event) }}" method="POST" class="d-inline">
-                                        @csrf @method('DELETE')
-                                        <button type="button" class="btn btn-outline-danger delete-btn" 
-                                                data-title="{{ $event->title }}" title="Delete">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
+                                    </button>
+                                    <button class="btn btn-clean btn-delete delete-btn" title="Delete" data-event-id="{{ $event->id }}" data-title="{{ $event->title }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -212,25 +206,76 @@
                             Clear Filters
                         </a>
                     @endif
-                    <a href="{{ route('admin.events.create') }}" class="btn btn-primary">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createEventModal">
                         <i class="fas fa-plus me-1"></i>Create Event
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
     @endif
 </div>
 
+<!-- Create Event Modal -->
+<div class="modal fade" id="createEventModal" tabindex="-1" aria-labelledby="createEventModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="createEventModalLabel">
+                    <i class="fas fa-plus-circle me-2"></i>Create New Event
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Create form content will be loaded here -->
+                <div id="createEventFormContainer">
+                    <!-- Form will be dynamically loaded -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Event Modal -->
+<div class="modal fade" id="editEventModal" tabindex="-1" aria-labelledby="editEventModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="editEventModalLabel">
+                    <i class="fas fa-edit me-2"></i>Edit Event
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Edit form content will be loaded here -->
+                <div id="editEventFormContainer">
+                    <!-- Form will be dynamically loaded -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form for delete -->
+<form id="deleteForm" method="POST" style="display: none;">
+    @csrf @method('DELETE')
+</form>
+
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Load create form when modal is shown
+    const createModal = document.getElementById('createEventModal');
+    createModal.addEventListener('show.bs.modal', function () {
+        loadCreateForm();
+    });
+
     // Delete confirmation
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
+            const eventId = this.dataset.eventId;
             const title = this.dataset.title;
-            const form = this.closest('form');
             
             Swal.fire({
                 title: 'Delete Event?',
@@ -239,9 +284,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 showCancelButton: true,
                 confirmButtonText: 'Yes, Delete',
                 cancelButtonText: 'Cancel',
-                confirmButtonColor: '#dc3545'
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d'
             }).then(result => {
-                if (result.isConfirmed) form.submit();
+                if (result.isConfirmed) {
+                    const form = document.getElementById('deleteForm');
+                    form.action = `/admin/events/${eventId}`;
+                    form.submit();
+                }
             });
         });
     });
@@ -269,9 +319,205 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Load create form
+function loadCreateForm() {
+    const container = document.getElementById('createEventFormContainer');
+    container.innerHTML = `
+        <form action="{{ route('admin.events.store') }}" method="POST" enctype="multipart/form-data" id="createEventForm">
+            @csrf
+            
+            <!-- Basic Info -->
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label for="create_title" class="form-label fw-semibold">Event Title <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="create_title" name="title" required placeholder="Enter event title">
+                </div>
+                
+                <div class="col-md-12 mb-3">
+                    <label for="create_description" class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="create_description" name="description" rows="4" required placeholder="Describe your event..."></textarea>
+                </div>
+            </div>
+
+            <!-- Date & Location -->
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="create_date" class="form-label fw-semibold">Event Date <span class="text-danger">*</span></label>
+                    <input type="datetime-local" class="form-control" id="create_date" name="date" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="create_location" class="form-label fw-semibold">Location <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="create_location" name="location" required placeholder="Event location">
+                </div>
+            </div>
+
+            <!-- Department & Status -->
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="create_department" class="form-label fw-semibold">Department</label>
+                    <select class="form-select" id="create_department" name="department">
+                        <option value="">Select Department (Optional)</option>
+                        <option value="BSIT">BSIT - Bachelor of Science in Information Technology</option>
+                        <option value="BSBA">BSBA - Bachelor of Science in Business Administration</option>
+                        <option value="BSED">BSED - Bachelor of Science in Education</option>
+                        <option value="BEED">BEED - Bachelor of Elementary Education</option>
+                        <option value="BSHM">BSHM - Bachelor of Science in Hospitality Management</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="create_status" class="form-label fw-semibold">Status</label>
+                    <select class="form-select" id="create_status" name="status">
+                        <option value="active" selected>Active</option>
+                        <option value="postponed">Postponed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Cancel Reason (hidden by default) -->
+            <div class="row" id="create_cancelReasonRow" style="display: none;">
+                <div class="col-md-12 mb-3">
+                    <label for="create_cancel_reason" class="form-label fw-semibold">Reason for Postponement/Cancellation</label>
+                    <textarea class="form-control" id="create_cancel_reason" name="cancel_reason" rows="2" placeholder="Provide reason..."></textarea>
+                </div>
+            </div>
+
+            <!-- Image Upload -->
+            <div class="mb-4">
+                <label for="create_image" class="form-label fw-semibold">Event Image</label>
+                <input type="file" class="form-control" id="create_image" name="image" accept="image/jpeg,image/png,image/jpg,image/gif">
+                <div class="form-text">Supported: JPG, PNG, GIF. Max size: 2MB</div>
+                
+                <!-- Preview -->
+                <div id="create_imagePreview" class="mt-3" style="display: none;">
+                    <div class="border rounded p-2 bg-light">
+                        <img id="create_previewImg" src="" alt="Preview" class="img-fluid rounded" style="max-height: 200px;">
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeCreatePreview()">
+                                <i class="fas fa-times"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>Create Event
+                </button>
+            </div>
+        </form>
+    `;
+
+    // Initialize create form functionality
+    initializeCreateForm();
+}
+
+// Initialize create form
+function initializeCreateForm() {
+    const statusSelect = document.getElementById('create_status');
+    const cancelReasonRow = document.getElementById('create_cancelReasonRow');
+    const imageInput = document.getElementById('create_image');
+    
+    // Show/hide cancel reason based on status
+    statusSelect.addEventListener('change', function() {
+        cancelReasonRow.style.display = ['postponed', 'cancelled'].includes(this.value) ? 'block' : 'none';
+    });
+    
+    // Image preview
+    imageInput.addEventListener('change', function() {
+        previewCreateImage(this);
+    });
+}
+
+// Image preview for create form
+function previewCreateImage(input) {
+    const preview = document.getElementById('create_imagePreview');
+    const img = document.getElementById('create_previewImg');
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            img.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Remove create preview
+function removeCreatePreview() {
+    document.getElementById('create_image').value = '';
+    document.getElementById('create_imagePreview').style.display = 'none';
+}
+
+// Edit event function
+function editEvent(eventId) {
+    // Load edit form via AJAX
+    fetch(`/admin/events/${eventId}/edit`)
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('editEventFormContainer').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Error loading edit form:', error);
+        });
+}
+
+// View event function
+function viewEvent(eventId) {
+    window.location.href = `/admin/events/${eventId}`;
+}
 </script>
 
 <style>
+/* Clean Action Buttons */
+.action-buttons {
+    gap: 4px;
+}
+
+.btn-clean {
+    background: none;
+    border: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    color: #6b7280;
+    font-size: 14px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-clean:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-view:hover {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+}
+
+.btn-edit:hover {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+}
+
+.btn-delete:hover {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
 /* Event Image Styling */
 .event-image {
     width: 64px;
@@ -362,14 +608,6 @@ document.addEventListener('DOMContentLoaded', function() {
     background-color: #f9fafb;
 }
 
-/* Button Groups */
-.btn-group .btn {
-    border-radius: 8px;
-    margin: 0 2px;
-    padding: 0.375rem 0.5rem;
-    font-size: 0.875rem;
-}
-
 /* Cards */
 .card {
     border-radius: 16px;
@@ -405,17 +643,31 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
 }
 
+/* Modal Styling */
+.modal-content {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    border-radius: 16px 16px 0 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .event-image { width: 48px; height: 48px; }
-    .btn-group .btn { padding: 0.25rem 0.375rem; font-size: 0.75rem; }
+    .btn-clean { width: 32px; height: 32px; padding: 6px; font-size: 12px; }
     .table th:nth-child(2), .table td:nth-child(2) { display: none; }
+    .action-buttons { gap: 2px; }
 }
 
 @media (max-width: 576px) {
     .event-image { width: 40px; height: 40px; }
     .table th:nth-child(5), .table td:nth-child(5),
     .table th:nth-child(7), .table td:nth-child(7) { display: none; }
+    .btn-clean { width: 30px; height: 30px; }
 }
 </style>
 @endpush
