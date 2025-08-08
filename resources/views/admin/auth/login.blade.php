@@ -137,7 +137,7 @@
                 @csrf
                 
                 <div class="mb-4">
-                    <label for="email" class="form-label">EMAILss</label>
+                    <label for="email" class="form-label">EMAIL</label>
                     <input type="email" 
                            class="form-control @error('email') is-invalid @enderror" 
                            id="email" 
@@ -167,7 +167,7 @@
 
             <div class="back-link">
                 <i class="fas fa-arrow-left"></i>
-                <a href="{{ url('/') }}">back to homepage</a>
+                <a href="{{ url('/') }}">back to homepagesssssssssss</a>
             </div>
         </div>
     </div>
