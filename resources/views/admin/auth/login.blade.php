@@ -167,7 +167,7 @@
 
             <div class="back-link">
                 <i class="fas fa-arrow-left"></i>
-                <a href="{{ url('/') }}">back to homepagesssssssssss</a>
+                <a href="{{ url('/') }}">back to homepage</a>
             </div>
         </div>
     </div>
