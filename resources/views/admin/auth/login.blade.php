@@ -137,7 +137,7 @@
                 @csrf
                 
                 <div class="mb-4">
-                    <label for="email" class="form-label">EMAIL</label>
+                    <label for="email" class="form-label">EMAILss</label>
                     <input type="email" 
                            class="form-control @error('email') is-invalid @enderror" 
                            id="email" 
@@ -190,6 +190,3 @@
     </script>
 </body>
 </html>
-<?php
-echo"cute"
-?>
