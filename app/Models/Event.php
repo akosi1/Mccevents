@@ -2,73 +2,57 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\{Factories\HasFactory, Model, Relations\HasMany, Relations\BelongsToMany};
 
 class Event extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'title',
-        'description',
-        'date',
-        'location',
-        'department',
-        'status',
-        'image', // Make sure this is in fillable
+        'title', 'description', 'date', 'location', 'status', 
+        'department', 'repeat_type', 'repeat_interval', 'repeat_until',
+        'parent_event_id', 'cancel_reason', 'image',
     ];
 
     protected $casts = [
         'date' => 'datetime',
+        'repeat_until' => 'datetime',
     ];
 
-    // Define departments constant
-    const DEPARTMENTS = [
-        'IT' => 'Information Technology',
-        'HR' => 'Human Resources',
-        'FIN' => 'Finance',
-        'MKT' => 'Marketing',
-        'OPS' => 'Operations',
-        'ADM' => 'Administration',
-    ];
-
-    /**
-     * Check if event has an image
-     */
-    public function hasImage()
+    public function hasImage(): bool
     {
-        return !empty($this->image) && Storage::disk('public')->exists($this->image);
+        return !empty($this->image);
     }
 
-    /**
-     * Get the full URL for the event image
-     */
-    public function getImageUrlAttribute()
+    public function joins(): HasMany
     {
-        if ($this->hasImage()) {
-            return Storage::disk('public')->url($this->image);
-        }
-        
-        return null;
+        return $this->hasMany(EventJoin::class);
     }
 
-    /**
-     * Alternative method to get image URL
-     */
-    public function getImageAttribute($value)
+    public function joinedUsers(): BelongsToMany
     {
-        if ($value) {
-            // If it's already a full URL, return as is
-            if (filter_var($value, FILTER_VALIDATE_URL)) {
-                return $value;
-            }
-            
-            // If it's a relative path, convert to full URL
-            return Storage::disk('public')->url($value);
-        }
-        
-        return null;
+        return $this->belongsToMany(User::class, 'event_joins')
+                    ->withTimestamps()
+                    ->withPivot('joined_at');
+    }
+
+    public function isJoinedByUser($userId): bool
+    {
+        return $this->joins()->where('user_id', $userId)->exists();
+    }
+
+    public function getJoinedCountAttribute(): int
+    {
+        return $this->joins()->count();
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    public function scopeUpcoming($query)
+    {
+        return $query->where('date', '>=', now());
     }
 }
