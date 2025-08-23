@@ -4,12 +4,22 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Services\EventRecurrenceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Carbon\Carbon;
 
 class EventController extends Controller
 {
+    protected $eventRecurrenceService;
+
+    public function __construct(EventRecurrenceService $eventRecurrenceService)
+    {
+        $this->eventRecurrenceService = $eventRecurrenceService;
+    }
+
     // Define departments array to ensure consistency
     const DEPARTMENTS = [
         'BSIT' => 'Bachelor of Science in Information Technology',
@@ -21,7 +31,8 @@ class EventController extends Controller
 
     public function index(Request $request)
     {
-        $query = Event::query();
+        $query = Event::with(['parentEvent', 'childEvents'])
+                      ->whereNull('parent_event_id'); // Only show parent events
 
         // Search filter
         if ($request->filled('search')) {
@@ -39,7 +50,28 @@ class EventController extends Controller
 
         // Department filter
         if ($request->filled('department')) {
-            $query->where('department', $request->department);
+            $query->where(function ($q) use ($request) {
+                $q->where('department', $request->department)
+                  ->orWhereJsonContains('allowed_departments', $request->department);
+            });
+        }
+
+        // Exclusivity filter
+        if ($request->filled('exclusivity')) {
+            if ($request->exclusivity === 'exclusive') {
+                $query->where('is_exclusive', true);
+            } elseif ($request->exclusivity === 'open') {
+                $query->where('is_exclusive', false);
+            }
+        }
+
+        // Recurrence filter
+        if ($request->filled('recurrence')) {
+            if ($request->recurrence === 'recurring') {
+                $query->where('is_recurring', true);
+            } elseif ($request->recurrence === 'one_time') {
+                $query->where('is_recurring', false);
+            }
         }
 
         $perPage = $request->get('per_page', 10);
@@ -58,16 +90,7 @@ class EventController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'date' => 'required|date|after:now',
-            'location' => 'required|string|max:255',
-            'department' => 'nullable|string|in:' . implode(',', array_keys(self::DEPARTMENTS)),
-            'status' => 'required|in:active,postponed,cancelled',
-            'cancel_reason' => 'required_if:status,postponed,cancelled|nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB max
-        ]);
+        $validated = $this->validateEventData($request);
 
         // Handle image upload
         if ($request->hasFile('image')) {
@@ -77,14 +100,28 @@ class EventController extends Controller
             $validated['image'] = $imagePath;
         }
 
-        Event::create($validated);
+        // Process department exclusivity
+        $validated = $this->processDepartmentExclusivity($validated, $request);
+
+        // Create the main event
+        $event = Event::create($validated);
+
+        // Handle recurring events
+        if ($request->boolean('is_recurring') && $request->filled('recurrence_pattern')) {
+            $this->eventRecurrenceService->createRecurringEvents($event, $validated);
+        }
 
         return redirect()->route('admin.events.index')
-                        ->with('success', 'Event created successfully!');
+                        ->with('success', 'Event created successfully!' . 
+                               ($event->is_recurring ? ' Recurring instances have been generated.' : ''));
     }
 
     public function show(Event $event)
     {
+        $event->load(['childEvents' => function ($query) {
+            $query->orderBy('date', 'asc');
+        }]);
+        
         return view('admin.events.show', compact('event'));
     }
 
@@ -95,17 +132,7 @@ class EventController extends Controller
 
     public function update(Request $request, Event $event)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'date' => 'required|date',
-            'location' => 'required|string|max:255',
-            'department' => 'nullable|string|in:' . implode(',', array_keys(self::DEPARTMENTS)),
-            'status' => 'required|in:active,postponed,cancelled',
-            'cancel_reason' => 'required_if:status,postponed,cancelled|nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'remove_image' => 'nullable|boolean',
-        ]);
+        $validated = $this->validateEventData($request, $event);
 
         // Handle image removal
         if ($request->filled('remove_image') && $request->remove_image == '1') {
@@ -128,26 +155,93 @@ class EventController extends Controller
             $validated['image'] = $imagePath;
         }
 
+        // Process department exclusivity
+        $validated = $this->processDepartmentExclusivity($validated, $request);
+
         // Remove the remove_image flag from validated data before updating
         unset($validated['remove_image']);
 
         $event->update($validated);
 
+        // Handle recurring event updates
+        if ($request->boolean('update_series') && $event->isRecurring()) {
+            $this->eventRecurrenceService->updateRecurringSeries($event, $validated);
+            $message = 'Event series updated successfully!';
+        } else {
+            $message = 'Event updated successfully!';
+        }
+
         return redirect()->route('admin.events.index')
-                        ->with('success', 'Event updated successfully!');
+                        ->with('success', $message);
     }
 
     public function destroy(Event $event)
     {
-        // Delete associated image
-        if ($event->image && Storage::disk('public')->exists($event->image)) {
-            Storage::disk('public')->delete($event->image);
+        // Handle recurring event deletion
+        if ($event->isRecurring() && request()->boolean('delete_series')) {
+            $this->eventRecurrenceService->deleteRecurringSeries($event);
+            $message = 'Event series deleted successfully!';
+        } else {
+            // Delete associated image
+            if ($event->image && Storage::disk('public')->exists($event->image)) {
+                Storage::disk('public')->delete($event->image);
+            }
+            $event->delete();
+            $message = 'Event deleted successfully!';
         }
 
-        $event->delete();
-
         return redirect()->route('admin.events.index')
-                        ->with('success', 'Event deleted successfully!');
+                        ->with('success', $message);
+    }
+
+    /**
+     * Generate print summary for events
+     */
+    public function printSummary(Request $request)
+    {
+        $query = Event::with(['childEvents']);
+
+        // Apply same filters as index
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('title', 'like', '%' . $request->search . '%')
+                  ->orWhere('description', 'like', '%' . $request->search . '%')
+                  ->orWhere('location', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('department')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('department', $request->department)
+                  ->orWhereJsonContains('allowed_departments', $request->department);
+            });
+        }
+
+        $events = $query->orderBy('date', 'desc')->get();
+        
+        // Calculate statistics
+        $stats = [
+            'total' => $events->count(),
+            'active' => $events->where('status', 'active')->count(),
+            'postponed' => $events->where('status', 'postponed')->count(),
+            'cancelled' => $events->where('status', 'cancelled')->count(),
+            'exclusive' => $events->where('is_exclusive', true)->count(),
+            'open' => $events->where('is_exclusive', false)->count(),
+            'recurring' => $events->where('is_recurring', true)->count(),
+            'one_time' => $events->where('is_recurring', false)->count(),
+            'by_department' => $events->where('is_exclusive', true)
+                                    ->whereNotNull('department')
+                                    ->groupBy('department')
+                                    ->map->count(),
+            'upcoming' => $events->where('date', '>=', now())->count(),
+            'past' => $events->where('date', '<', now())->count(),
+        ];
+
+        return view('admin.events.print-summary', compact('events', 'stats', 'request'));
     }
 
     /**
@@ -156,5 +250,68 @@ class EventController extends Controller
     public static function getDepartments()
     {
         return self::DEPARTMENTS;
+    }
+
+    /**
+     * Validate event data
+     */
+    private function validateEventData(Request $request, Event $event = null)
+    {
+        $rules = [
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'date' => 'required|date',
+            'start_time' => 'nullable|date_format:H:i',
+            'end_time' => 'nullable|date_format:H:i|after:start_time',
+            'location' => 'required|string|max:255',
+            'department' => 'nullable|string|in:' . implode(',', array_keys(self::DEPARTMENTS)),
+            'status' => 'required|in:active,postponed,cancelled',
+            'cancel_reason' => 'required_if:status,postponed,cancelled|nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'remove_image' => 'nullable|boolean',
+            
+            // Exclusivity fields
+            'is_exclusive' => 'boolean',
+            'allowed_departments' => 'nullable|array',
+            'allowed_departments.*' => 'string|in:' . implode(',', array_keys(self::DEPARTMENTS)),
+            
+            // Recurrence fields
+            'is_recurring' => 'boolean',
+            'recurrence_pattern' => 'nullable|string|in:daily,weekly,monthly,yearly,weekdays,custom',
+            'recurrence_interval' => 'nullable|integer|min:1|max:365',
+            'recurrence_end_date' => 'nullable|date|after:date',
+            'recurrence_count' => 'nullable|integer|min:1|max:365',
+            
+            // Update options
+            'update_series' => 'boolean',
+        ];
+
+        // For new events, date should be in the future
+        if (!$event) {
+            $rules['date'] = 'required|date|after:now';
+        }
+
+        return $request->validate($rules);
+    }
+
+    /**
+     * Process department exclusivity settings
+     */
+    private function processDepartmentExclusivity(array $validated, Request $request): array
+    {
+        if ($request->boolean('is_exclusive')) {
+            $validated['is_exclusive'] = true;
+            
+            // Ensure primary department is set for exclusive events
+            if (empty($validated['department']) && empty($validated['allowed_departments'])) {
+                $validated['department'] = array_keys(self::DEPARTMENTS)[0]; // Default to first department
+            }
+        } else {
+            $validated['is_exclusive'] = false;
+            $validated['department'] = null;
+            $validated['allowed_departments'] = null;
+        }
+
+        return $validated;
     }
 }

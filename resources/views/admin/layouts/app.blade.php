@@ -385,10 +385,10 @@
                href="{{ route('admin.users.index') }}">
                 <i class="fas fa-users"></i> Users
             </a>
-            <!-- <a class="nav-link {{ request()->routeIs('admin.certificates') ? 'active' : '' }}" 
+            <a class="nav-link {{ request()->routeIs('admin.certificates') ? 'active' : '' }}" 
                href="{{ route('admin.certificates') }}">
                 <i class="fas fa-certificate"></i> Certificates
-            </a> -->
+            </a>
         </nav>
         
         <div class="sidebar-footer">

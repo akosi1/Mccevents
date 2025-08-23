@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name', 'EventAP') }} - Dashboard</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -572,7 +573,6 @@
             }
         }
     </style>
-</head>
 <body>
     <!-- Navigation -->
     <nav class="navbar">
@@ -718,10 +718,25 @@
                                         NEW
                                     @elseif($event->date >= now() && $event->date <= now()->addWeek())
                                         UPCOMING
+                                    @elseif($event->is_recurring)
+                                        RECURRING
                                     @else
                                         EVENT
                                     @endif
                                 </div>
+                                
+                                <!-- Exclusivity Badge -->
+                                @if($event->is_exclusive)
+                                    <div class="exclusivity-badge exclusive">
+                                        <i class="fas fa-lock"></i>
+                                        EXCLUSIVE
+                                    </div>
+                                @else
+                                    <div class="exclusivity-badge open">
+                                        <i class="fas fa-globe"></i>
+                                        OPEN
+                                    </div>
+                                @endif
                             </div>
                             <div class="event-content">
                                 <h3 class="event-title">{{ $event->title }}</h3>
@@ -732,14 +747,24 @@
                                         <i class="fas fa-calendar" style="width: 16px; color: #667eea;"></i>
                                         <span>{{ $event->date->format('F d, Y') }}</span>
                                     </div>
+                                    @if($event->start_time)
+                                    <div class="event-detail-item">
+                                        <i class="fas fa-clock" style="width: 16px; color: #667eea;"></i>
+                                        <span>{{ $event->start_time->format('g:i A') }}@if($event->end_time) - {{ $event->end_time->format('g:i A') }}@endif</span>
+                                    </div>
+                                    @endif
                                     <div class="event-detail-item">
                                         <i class="fas fa-map-marker-alt" style="width: 16px; color: #667eea;"></i>
                                         <span>{{ $event->location }}</span>
                                     </div>
-                                    @if($event->department)
                                     <div class="event-detail-item">
                                         <i class="fas fa-graduation-cap" style="width: 16px; color: #667eea;"></i>
-                                        <span>{{ $event->department }} Department</span>
+                                        <span>{{ $event->department_display }}</span>
+                                    </div>
+                                    @if($event->is_recurring)
+                                    <div class="event-detail-item">
+                                        <i class="fas fa-repeat" style="width: 16px; color: #667eea;"></i>
+                                        <span>{{ $event->recurrence_display }}</span>
                                     </div>
                                     @endif
                                 </div>
@@ -830,7 +855,7 @@
                             @if(request('department') || request('search'))
                                 No events match your current filters. Try adjusting your search criteria.
                             @else
-                                There are no events to display at the moment. Please check back later.
+                                There are no events available for your department at the moment. Please check back later.
                             @endif
                         </p>
                     </div>

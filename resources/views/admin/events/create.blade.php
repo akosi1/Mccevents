@@ -2,9 +2,35 @@
 @section('title', 'Create Event')
 @section('page-title', 'Create New Event')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/admin/events-create.css') }}">
+<style>
+    .exclusivity-card, .recurrence-card {
+        border: 1px solid #e3e6f0;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        background: #f8f9fc;
+    }
+    .card-header-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 6px;
+        margin-bottom: 15px;
+    }
+    .dept-checkbox {
+        margin: 5px 0;
+    }
+    .time-input {
+        max-width: 150px;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="row justify-content-center">
-    <div class="col-lg-8 col-md-10">
+    <div class="col-lg-10 col-md-12">
         <div class="card shadow">
             <div class="card-header bg-primary text-white">
                 <div class="d-flex justify-content-between align-items-center">
@@ -36,15 +62,27 @@
                         </div>
                     </div>
 
-                    <!-- Date & Location -->
+                    <!-- Date, Time & Location -->
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="date" class="form-label fw-semibold">Event Date <span class="text-danger">*</span></label>
-                            <input type="datetime-local" class="form-control @error('date') is-invalid @enderror" 
+                            <input type="date" class="form-control @error('date') is-invalid @enderror" 
                                 id="date" name="date" value="{{ old('date') }}" required>
                             @error('date')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-2 mb-3">
+                            <label for="start_time" class="form-label fw-semibold">Start Time</label>
+                            <input type="time" class="form-control time-input @error('start_time') is-invalid @enderror" 
+                                id="start_time" name="start_time" value="{{ old('start_time') }}">
+                            @error('start_time')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label for="end_time" class="form-label fw-semibold">End Time</label>
+                            <input type="time" class="form-control time-input @error('end_time') is-invalid @enderror" 
+                                id="end_time" name="end_time" value="{{ old('end_time') }}">
+                            @error('end_time')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-md-4 mb-3">
                             <label for="location" class="form-label fw-semibold">Location <span class="text-danger">*</span></label>
                             <input type="text" class="form-control @error('location') is-invalid @enderror" 
                                 id="location" name="location" value="{{ old('location') }}" required 
@@ -53,20 +91,8 @@
                         </div>
                     </div>
 
-                    <!-- Department & Status -->
+                    <!-- Status -->
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="department" class="form-label fw-semibold">Department</label>
-                            <select class="form-select @error('department') is-invalid @enderror" id="department" name="department">
-                                <option value="">Select Department (Optional)</option>
-                                <option value="BSIT" {{ old('department') == 'BSIT' ? 'selected' : '' }}>BSIT - Bachelor of Science in Information Technology</option>
-                                <option value="BSBA" {{ old('department') == 'BSBA' ? 'selected' : '' }}>BSBA - Bachelor of Science in Business Administration</option>
-                                <option value="BSED" {{ old('department') == 'BSED' ? 'selected' : '' }}>BSED - Bachelor of Science in Education</option>
-                                <option value="BEED" {{ old('department') == 'BEED' ? 'selected' : '' }}>BEED - Bachelor of Elementary Education</option>
-                                <option value="BSHM" {{ old('department') == 'BSHM' ? 'selected' : '' }}>BSHM - Bachelor of Science in Hospitality Management</option>
-                            </select>
-                            @error('department')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
                         <div class="col-md-6 mb-3">
                             <label for="status" class="form-label fw-semibold">Status</label>
                             <select class="form-select @error('status') is-invalid @enderror" id="status" name="status">
@@ -86,6 +112,111 @@
                                     id="cancel_reason" name="cancel_reason" rows="2" 
                                     placeholder="Provide reason...">{{ old('cancel_reason') }}</textarea>
                             @error('cancel_reason')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                    </div>
+
+                    <!-- Department Exclusivity Section -->
+                    <div class="exclusivity-card">
+                        <div class="card-header-custom">
+                            <h6 class="mb-0"><i class="fas fa-users me-2"></i>Department Access</h6>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="is_exclusive" name="is_exclusive" 
+                                   value="1" {{ old('is_exclusive') ? 'checked' : '' }}>
+                            <label class="form-check-label fw-semibold" for="is_exclusive">
+                                Restrict to specific departments
+                            </label>
+                            <div class="form-text">Uncheck to make this event available to all departments</div>
+                        </div>
+
+                        <div id="departmentSelection" style="display: {{ old('is_exclusive') ? 'block' : 'none' }};">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="department" class="form-label fw-semibold">Primary Department</label>
+                                    <select class="form-select @error('department') is-invalid @enderror" id="department" name="department">
+                                        <option value="">Select Primary Department</option>
+                                        @foreach(['BSIT' => 'Bachelor of Science in Information Technology', 'BSBA' => 'Bachelor of Science in Business Administration', 'BSED' => 'Bachelor of Science in Education', 'BEED' => 'Bachelor of Elementary Education', 'BSHM' => 'Bachelor of Science in Hospitality Management'] as $code => $name)
+                                            <option value="{{ $code }}" {{ old('department') == $code ? 'selected' : '' }}>
+                                                {{ $code }} - {{ $name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('department')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Additional Allowed Departments</label>
+                                    <div class="border rounded p-2" style="max-height: 120px; overflow-y: auto;">
+                                        @foreach(['BSIT' => 'Bachelor of Science in Information Technology', 'BSBA' => 'Bachelor of Science in Business Administration', 'BSED' => 'Bachelor of Science in Education', 'BEED' => 'Bachelor of Elementary Education', 'BSHM' => 'Bachelor of Science in Hospitality Management'] as $code => $name)
+                                            <div class="form-check dept-checkbox">
+                                                <input class="form-check-input" type="checkbox" name="allowed_departments[]" 
+                                                       value="{{ $code }}" id="dept_{{ $code }}"
+                                                       {{ in_array($code, old('allowed_departments', [])) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="dept_{{ $code }}">
+                                                    {{ $code }}
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    @error('allowed_departments')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recurring Events Section -->
+                    <div class="recurrence-card">
+                        <div class="card-header-custom">
+                            <h6 class="mb-0"><i class="fas fa-redo me-2"></i>Recurring Event</h6>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="is_recurring" name="is_recurring" 
+                                   value="1" {{ old('is_recurring') ? 'checked' : '' }}>
+                            <label class="form-check-label fw-semibold" for="is_recurring">
+                                Make this a recurring event
+                            </label>
+                            <div class="form-text">Create multiple instances of this event based on a schedule</div>
+                        </div>
+
+                        <div id="recurrenceSettings" style="display: {{ old('is_recurring') ? 'block' : 'none' }};">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="recurrence_pattern" class="form-label fw-semibold">Repeat Pattern</label>
+                                    <select class="form-select @error('recurrence_pattern') is-invalid @enderror" 
+                                            id="recurrence_pattern" name="recurrence_pattern">
+                                        <option value="">Select Pattern</option>
+                                        <option value="daily" {{ old('recurrence_pattern') == 'daily' ? 'selected' : '' }}>Daily</option>
+                                        <option value="weekly" {{ old('recurrence_pattern') == 'weekly' ? 'selected' : '' }}>Weekly</option>
+                                        <option value="monthly" {{ old('recurrence_pattern') == 'monthly' ? 'selected' : '' }}>Monthly</option>
+                                        <option value="yearly" {{ old('recurrence_pattern') == 'yearly' ? 'selected' : '' }}>Yearly</option>
+                                        <option value="weekdays" {{ old('recurrence_pattern') == 'weekdays' ? 'selected' : '' }}>Weekdays Only</option>
+                                    </select>
+                                    @error('recurrence_pattern')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-2 mb-3">
+                                    <label for="recurrence_interval" class="form-label fw-semibold">Every</label>
+                                    <input type="number" class="form-control @error('recurrence_interval') is-invalid @enderror" 
+                                           id="recurrence_interval" name="recurrence_interval" 
+                                           value="{{ old('recurrence_interval', 1) }}" min="1" max="365">
+                                    @error('recurrence_interval')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    <div class="form-text" id="intervalText">day(s)</div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="recurrence_end_date" class="form-label fw-semibold">End Date</label>
+                                    <input type="date" class="form-control @error('recurrence_end_date') is-invalid @enderror" 
+                                           id="recurrence_end_date" name="recurrence_end_date" 
+                                           value="{{ old('recurrence_end_date') }}">
+                                    @error('recurrence_end_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="recurrence_count" class="form-label fw-semibold">Max Occurrences</label>
+                                    <input type="number" class="form-control @error('recurrence_count') is-invalid @enderror" 
+                                           id="recurrence_count" name="recurrence_count" 
+                                           value="{{ old('recurrence_count') }}" min="1" max="365" placeholder="Optional">
+                                    @error('recurrence_count')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -127,233 +258,85 @@
 </div>
 
 @push('scripts')
+<script src="{{ asset('js/admin/events-create.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Handle exclusivity toggle
+    const isExclusiveCheckbox = document.getElementById('is_exclusive');
+    const departmentSelection = document.getElementById('departmentSelection');
+    
+    isExclusiveCheckbox.addEventListener('change', function() {
+        departmentSelection.style.display = this.checked ? 'block' : 'none';
+    });
+
+    // Handle recurring toggle
+    const isRecurringCheckbox = document.getElementById('is_recurring');
+    const recurrenceSettings = document.getElementById('recurrenceSettings');
+    
+    isRecurringCheckbox.addEventListener('change', function() {
+        recurrenceSettings.style.display = this.checked ? 'block' : 'none';
+    });
+
+    // Handle recurrence pattern change
+    const recurrencePattern = document.getElementById('recurrence_pattern');
+    const intervalText = document.getElementById('intervalText');
+    
+    recurrencePattern.addEventListener('change', function() {
+        const pattern = this.value;
+        let text = 'day(s)';
+        
+        switch(pattern) {
+            case 'weekly':
+                text = 'week(s)';
+                break;
+            case 'monthly':
+                text = 'month(s)';
+                break;
+            case 'yearly':
+                text = 'year(s)';
+                break;
+            case 'weekdays':
+                text = 'weekday';
+                document.getElementById('recurrence_interval').style.display = 'none';
+                break;
+            default:
+                document.getElementById('recurrence_interval').style.display = 'block';
+        }
+        
+        intervalText.textContent = text;
+    });
+
+    // Handle status change for cancel reason
     const statusSelect = document.getElementById('status');
     const cancelReasonRow = document.getElementById('cancelReasonRow');
+    
+    statusSelect.addEventListener('change', function() {
+        const showReason = ['postponed', 'cancelled'].includes(this.value);
+        cancelReasonRow.style.display = showReason ? 'block' : 'none';
+    });
+
+    // Image preview functionality
     const imageInput = document.getElementById('image');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
     
-    // Show/hide cancel reason based on status
-    function toggleCancelReason() {
-        cancelReasonRow.style.display = ['postponed', 'cancelled'].includes(statusSelect.value) ? 'block' : 'none';
-    }
-    
-    // Image preview
-    function previewImage(input) {
-        const preview = document.getElementById('imagePreview');
-        const img = document.getElementById('previewImg');
-        
-        if (input.files && input.files[0]) {
-            // Check file size (2MB = 2 * 1024 * 1024 bytes)
-            if (input.files[0].size > 2 * 1024 * 1024) {
-                alert('File size must be less than 2MB');
-                input.value = '';
-                preview.style.display = 'none';
-                return;
-            }
-            
+    imageInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
             const reader = new FileReader();
-            reader.onload = e => {
-                img.src = e.target.result;
-                preview.style.display = 'block';
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                imagePreview.style.display = 'block';
             };
-            reader.readAsDataURL(input.files[0]);
-        } else {
-            preview.style.display = 'none';
-        }
-    }
-    
-    // Remove preview
-    window.removePreview = function() {
-        document.getElementById('image').value = '';
-        document.getElementById('imagePreview').style.display = 'none';
-    };
-    
-    // Event listeners
-    statusSelect.addEventListener('change', toggleCancelReason);
-    imageInput.addEventListener('change', function() {
-        previewImage(this);
-    });
-    
-    // Form validation
-    document.getElementById('eventForm').addEventListener('submit', function(e) {
-        const title = document.getElementById('title').value.trim();
-        const description = document.getElementById('description').value.trim();
-        const date = document.getElementById('date').value;
-        const location = document.getElementById('location').value.trim();
-        
-        if (!title || !description || !date || !location) {
-            e.preventDefault();
-            alert('Please fill in all required fields.');
-            return;
-        }
-        
-        // Check if date is in the past
-        const selectedDate = new Date(date);
-        const now = new Date();
-        if (selectedDate < now) {
-            e.preventDefault();
-            alert('Event date cannot be in the past.');
-            return;
+            reader.readAsDataURL(file);
         }
     });
-    
-    // Initialize
-    toggleCancelReason();
-    
-    // Set minimum date to today
-    const dateInput = document.getElementById('date');
-    const now = new Date();
-    const minDate = now.toISOString().slice(0, 16);
-    dateInput.min = minDate;
 });
+
+function removePreview() {
+    document.getElementById('image').value = '';
+    document.getElementById('imagePreview').style.display = 'none';
+}
 </script>
-
-<style>
-/* Enhanced Card Styling */
-.card {
-    border-radius: 16px;
-    border: none;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.card-header {
-    background: linear-gradient(135deg, #4f46e5, #4338ca);
-    border-radius: 16px 16px 0 0 !important;
-    border-bottom: none;
-    padding: 1.25rem 1.5rem;
-}
-
-.card-body {
-    padding: 2rem;
-}
-
-/* Form Controls */
-.form-control, .form-select {
-    border-radius: 10px;
-    border: 2px solid #e5e7eb;
-    padding: 0.75rem 1rem;
-    transition: all 0.2s ease;
-    font-size: 0.95rem;
-}
-
-.form-control:focus, .form-select:focus {
-    border-color: #4f46e5;
-    box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.1);
-    transform: translateY(-1px);
-}
-
-.form-label {
-    color: #374151;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-}
-
-/* Buttons */
-.btn {
-    border-radius: 10px;
-    padding: 0.75rem 1.5rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    border: 2px solid transparent;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #4f46e5, #4338ca);
-    border: none;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: linear-gradient(135deg, #4338ca, #3730a3);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(79, 70, 229, 0.3);
-}
-
-.btn-outline-secondary {
-    border-color: #d1d5db;
-    color: #6b7280;
-}
-
-.btn-outline-secondary:hover {
-    background-color: #f9fafb;
-    border-color: #9ca3af;
-    transform: translateY(-1px);
-}
-
-.btn-outline-danger {
-    border-color: #fca5a5;
-    color: #dc2626;
-    font-size: 0.85rem;
-}
-
-.btn-outline-danger:hover {
-    background-color: #dc2626;
-    border-color: #dc2626;
-    color: white;
-}
-
-/* Image Preview */
-#imagePreview {
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-#imagePreview .border {
-    border: 2px dashed #d1d5db !important;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    transition: all 0.2s ease;
-}
-
-#imagePreview:hover .border {
-    border-color: #4f46e5 !important;
-}
-
-/* Text Areas */
-textarea.form-control {
-    resize: vertical;
-    min-height: 100px;
-}
-
-/* Required Field Indicator */
-.text-danger {
-    color: #ef4444 !important;
-}
-
-/* Invalid Feedback */
-.invalid-feedback {
-    font-size: 0.85rem;
-    font-weight: 500;
-}
-
-.form-control.is-invalid, .form-select.is-invalid {
-    border-color: #ef4444;
-    box-shadow: 0 0 0 0.2rem rgba(239, 68, 68, 0.1);
-}
-
-/* Form Text */
-.form-text {
-    color: #6b7280;
-    font-size: 0.85rem;
-    margin-top: 0.25rem;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .card-body {
-        padding: 1.5rem;
-    }
-    
-    .btn {
-        padding: 0.625rem 1.25rem;
-        font-size: 0.9rem;
-    }
-}
-</style>
 @endpush
 @endsection

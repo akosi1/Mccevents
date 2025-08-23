@@ -9,14 +9,23 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Event::with('joins')
-                     ->where('status', 'active')
-                     ->upcoming();
+        $user = auth()->user();
+        
+        $query = Event::where('status', 'active')
+                      ->upcoming()
+                      ->whereNull('parent_event_id'); // Only show parent events, not recurring instances
 
+        // Department filter - now handles exclusive events properly
         if ($request->filled('department')) {
-            $query->where('department', $request->department);
+            $query->forDepartment($request->department);
+        } else {
+            // If no department filter, show events available for user's department
+            if ($user->department) {
+                $query->forDepartment($user->department);
+            }
         }
 
+        // Search filter
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('title', 'like', '%' . $request->search . '%')
