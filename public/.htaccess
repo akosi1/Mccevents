@@ -1,18 +1,6 @@
 <IfModule mod_rewrite.c>
-    <IfModule mod_negotiation.c>
-        Options -MultiViews -Indexes
-    </IfModule>
-
     RewriteEngine On
-
-    # Handle routes through Laravel
-    RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.php [L]
 </IfModule>
-
-# Protect sensitive files
-<FilesMatch "^(\.env|artisan|composer\.(json|lock)|package\.json|phpunit\.xml|webpack\.mix\.js|vite\.config\.js)$">
-    Order allow,deny
-    Deny from all
-</FilesMatch>
