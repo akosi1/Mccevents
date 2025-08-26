@@ -5,20 +5,14 @@
 
     RewriteEngine On
 
-    # Redirect Trailing Slashes
-    RewriteRule ^(.*)/$ /$1 [L,R=301]
-
-    # Send all requests to index.php
+    # Handle routes through Laravel
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
 
-# Block sensitive files
-<FilesMatch "^(\.env|artisan|composer\.(json|lock)|package\.json|package-lock\.json|phpunit\.xml|vite\.config\.js|webpack\.mix\.js)$">
+# Protect sensitive files
+<FilesMatch "^(\.env|artisan|composer\.(json|lock)|package\.json|phpunit\.xml|webpack\.mix\.js|vite\.config\.js)$">
     Order allow,deny
     Deny from all
 </FilesMatch>
-
-# Block storage & vendor folders
-RedirectMatch 403 ^/(storage|vendor|bootstrap|config|resources|routes|tests)(.*)$
