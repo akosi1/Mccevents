@@ -1,14 +1,19 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # ✅ If the request is for an existing file (like try.php, css, js, images), serve it directly
+    # ✅ Serve existing files (like test1.php) directly
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 
-    # ✅ If the request is for an existing folder, serve it directly
+    # ✅ Serve existing directories directly
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # 🚀 Otherwise, send everything else to Laravel (index.php)
+    # ✅ Redirect requests for assets (css, js, images) into /public
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(css|js|images|storage)/(.*)$ public/$1/$2 [L]
+
+    # 🚀 Everything else goes to Laravel index.php in root
     RewriteRule ^ index.php [L]
 </IfModule>
