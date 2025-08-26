@@ -12,16 +12,26 @@
             </h2>
             <p class="text-muted mb-0">{{ $events->total() }} total events</p>
         </div>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createEventModal">
-            <i class="fas fa-plus me-2"></i>Add Event
-        </button>
+        <div class="d-flex gap-2">
+            <!-- Print Summary Button -->
+            <a href="{{ route('admin.events.print-summary', request()->query()) }}" 
+               target="_blank" 
+               class="btn btn-outline-secondary"
+               title="Print Events Summary">
+                <i class="fas fa-print me-2"></i>Print
+            </a>
+            <!-- Add Event Button -->
+            <a href="{{ route('admin.events.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add Event
+            </a>
+        </div>
     </div>
 
-    <!-- Filters -->
+    <!-- Enhanced Filters -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body p-3">
             <form method="GET" class="row g-3">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <input type="text" class="form-control" name="search" 
                            value="{{ request('search') }}" placeholder="Search events...">
                 </div>
@@ -35,7 +45,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <select class="form-select" name="department" onchange="this.form.submit()">
                         <option value="">All Departments</option>
                         @foreach(['BSIT' => 'Bachelor of Science in Information Technology', 'BSBA' => 'Bachelor of Science in Business Administration', 'BSED' => 'Bachelor of Science in Education', 'BEED' => 'Bachelor of Elementary Education', 'BSHM' => 'Bachelor of Science in Hospitality Management'] as $code => $name)
@@ -46,12 +56,17 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select class="form-select" name="per_page" onchange="this.form.submit()">
-                        @foreach([10, 25, 50] as $num)
-                            <option value="{{ $num }}" {{ request('per_page') == $num ? 'selected' : '' }}>
-                                {{ $num }} items
-                            </option>
-                        @endforeach
+                    <select class="form-select" name="exclusivity" onchange="this.form.submit()">
+                        <option value="">All Access Types</option>
+                        <option value="open" {{ request('exclusivity') == 'open' ? 'selected' : '' }}>Open to All</option>
+                        <option value="exclusive" {{ request('exclusivity') == 'exclusive' ? 'selected' : '' }}>Department Exclusive</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" name="recurrence" onchange="this.form.submit()">
+                        <option value="">All Event Types</option>
+                        <option value="one_time" {{ request('recurrence') == 'one_time' ? 'selected' : '' }}>One-time</option>
+                        <option value="recurring" {{ request('recurrence') == 'recurring' ? 'selected' : '' }}>Recurring</option>
                     </select>
                 </div>
                 <div class="col-md-1">
@@ -73,8 +88,9 @@
                             <th class="ps-4 py-3">#</th>
                             <th class="py-3">Image</th>
                             <th class="py-3">Event</th>
-                            <th class="py-3">Date</th>
-                            <th class="py-3">Department</th>
+                            <th class="py-3">Date & Time</th>
+                            <th class="py-3">Access</th>
+                            <th class="py-3">Type</th>
                             <th class="py-3">Status</th>
                             <th class="py-3">Location</th>
                             <th class="py-3 text-center">Actions</th>
@@ -85,6 +101,9 @@
                         <tr>
                             <td class="ps-4 py-3 align-middle">
                                 <span class="text-muted fw-medium">#{{ $event->id }}</span>
+                                @if($event->isRecurring())
+                                    <div><small class="badge bg-info">Series</small></div>
+                                @endif
                             </td>
                             <td class="py-3 align-middle">
                                 <div class="event-image">
@@ -109,17 +128,42 @@
                                 <div>
                                     <h6 class="mb-1 fw-semibold">{{ Str::limit($event->title, 35) }}</h6>
                                     <small class="text-muted">{{ Str::limit($event->description, 50) }}</small>
+                                    @if($event->isRecurring())
+                                        <div><small class="text-info"><i class="fas fa-redo me-1"></i>{{ $event->recurrence_display }}</small></div>
+                                    @endif
                                 </div>
                             </td>
                             <td class="py-3 align-middle">
                                 <div class="fw-medium">{{ $event->date->format('M d, Y') }}</div>
-                                <small class="text-muted">{{ $event->date->format('h:i A') }}</small>
+                                @if($event->start_time)
+                                    <small class="text-muted">{{ $event->start_time->format('h:i A') }}</small>
+                                    @if($event->end_time)
+                                        <small class="text-muted"> - {{ $event->end_time->format('h:i A') }}</small>
+                                    @endif
+                                @endif
                             </td>
                             <td class="py-3 align-middle">
-                                @if($event->department)
-                                    <span class="badge bg-primary">{{ $event->department }}</span>
+                                @if($event->is_exclusive)
+                                    <span class="badge bg-warning text-dark" title="{{ $event->department_display }}">
+                                        <i class="fas fa-lock me-1"></i>Exclusive
+                                    </span>
+                                    <div><small class="text-muted">{{ Str::limit($event->department_display, 20) }}</small></div>
                                 @else
-                                    <span class="text-muted">-</span>
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-globe me-1"></i>Open to All
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="py-3 align-middle">
+                                @if($event->is_recurring)
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-redo me-1"></i>Recurring
+                                    </span>
+                                    <div><small class="text-muted">{{ $event->childEvents->count() + 1 }} events</small></div>
+                                @else
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-calendar me-1"></i>One-time
+                                    </span>
                                 @endif
                             </td>
                             <td class="py-3 align-middle">
@@ -135,10 +179,13 @@
                                     <button class="btn btn-clean btn-view" title="View" onclick="viewEvent({{ $event->id }})">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button class="btn btn-clean btn-edit" title="Edit" onclick="editEvent({{ $event->id }})" data-bs-toggle="modal" data-bs-target="#editEventModal">
+                                    <a href="{{ route('admin.events.edit', $event) }}" class="btn btn-clean btn-edit" title="Edit">
                                         <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-clean btn-delete delete-btn" title="Delete" data-event-id="{{ $event->id }}" data-title="{{ $event->title }}">
+                                    </a>
+                                    <button class="btn btn-clean btn-delete delete-btn" title="Delete" 
+                                            data-event-id="{{ $event->id }}" 
+                                            data-title="{{ $event->title }}"
+                                            data-is-recurring="{{ $event->is_recurring ? 'true' : 'false' }}">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -192,57 +239,38 @@
                 <i class="fas fa-calendar-alt fa-4x text-muted mb-4"></i>
                 <h5 class="text-muted mb-3">No Events Found</h5>
                 <p class="text-muted mb-4">
-                    {{ request()->hasAny(['search', 'status', 'department']) 
+                    {{ request()->hasAny(['search', 'status', 'department', 'exclusivity', 'recurrence']) 
                        ? 'No events match your search criteria.' 
                        : 'Get started by creating your first event!' }}
                 </p>
                 <div>
-                    @if(request()->hasAny(['search', 'status', 'department']))
+                    @if(request()->hasAny(['search', 'status', 'department', 'exclusivity', 'recurrence']))
                         <a href="{{ route('admin.events.index') }}" class="btn btn-outline-secondary me-2">
                             Clear Filters
                         </a>
                     @endif
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createEventModal">
+                    <a href="{{ route('admin.events.create') }}" class="btn btn-primary">
                         <i class="fas fa-plus me-1"></i>Create Event
-                    </button>
+                    </a>
                 </div>
             </div>
         </div>
     @endif
 </div>
 
-<!-- Create Event Modal -->
-<div class="modal fade" id="createEventModal" tabindex="-1" aria-labelledby="createEventModalLabel" aria-hidden="true">
+<!-- View Event Modal -->
+<div class="modal fade" id="viewEventModal" tabindex="-1" aria-labelledby="viewEventModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="createEventModalLabel">
-                    <i class="fas fa-plus-circle me-2"></i>Create New Event
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="viewEventModalLabel">
+                    <i class="fas fa-eye me-2"></i>Event Details
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div id="createEventFormContainer">
-                    <!-- Form will be dynamically loaded -->
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Event Modal -->
-<div class="modal fade" id="editEventModal" tabindex="-1" aria-labelledby="editEventModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title" id="editEventModalLabel">
-                    <i class="fas fa-edit me-2"></i>Edit Event
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="editEventFormContainer">
-                    <!-- Form will be dynamically loaded -->
+                <div id="viewEventContent">
+                    <!-- Content will be dynamically loaded -->
                 </div>
             </div>
         </div>
@@ -256,18 +284,148 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/admin/events-index.css') }}">
+<style>
+    .event-image {
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+    }
+    .event-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .no-image {
+        color: #6c757d;
+        font-size: 1.2rem;
+    }
+    .status-active { background-color: #28a745; }
+    .status-postponed { background-color: #ffc107; color: #212529; }
+    .status-cancelled { background-color: #dc3545; }
+    .btn-clean {
+        border: none;
+        background: none;
+        padding: 6px 8px;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+    }
+    .btn-view:hover { background-color: #e3f2fd; color: #1976d2; }
+    .btn-edit:hover { background-color: #fff3e0; color: #f57c00; }
+    .btn-delete:hover { background-color: #ffebee; color: #d32f2f; }
+</style>
 @endpush
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ asset('js/admin/events-index.js') }}"></script>
 <script>
-    // Pass success message to JavaScript
-    @if(session('success'))
-        document.addEventListener('DOMContentLoaded', function() {
-            showSuccessMessage('{{ session('success') }}');
+// View event function
+function viewEvent(eventId) {
+    fetch(`/admin/events/${eventId}`)
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('viewEventContent').innerHTML = html;
+            new bootstrap.Modal(document.getElementById('viewEventModal')).show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire('Error!', 'Failed to load event details.', 'error');
         });
-    @endif
+}
+
+// Enhanced delete function for recurring events
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteButtons = document.querySelectorAll('.delete-btn');
+    
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const eventId = this.dataset.eventId;
+            const title = this.dataset.title;
+            const isRecurring = this.dataset.isRecurring === 'true';
+            
+            let confirmText = `Are you sure you want to delete "${title}"?`;
+            let confirmButtonText = 'Yes, delete it!';
+            
+            if (isRecurring) {
+                confirmText = `This is a recurring event. How would you like to proceed?`;
+            }
+            
+            if (isRecurring) {
+                // Special handling for recurring events
+                Swal.fire({
+                    title: 'Delete Recurring Event',
+                    text: confirmText,
+                    icon: 'warning',
+                    showDenyButton: true,
+                    showCancelButton: true,
+                    confirmButtonText: 'Delete entire series',
+                    denyButtonText: 'Delete only this event',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#d33',
+                    denyButtonColor: '#3085d6'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        deleteEvent(eventId, true); // Delete series
+                    } else if (result.isDenied) {
+                        deleteEvent(eventId, false); // Delete single
+                    }
+                });
+            } else {
+                // Regular delete confirmation
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: confirmText,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: confirmButtonText
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        deleteEvent(eventId, false);
+                    }
+                });
+            }
+        });
+    });
+});
+
+function deleteEvent(eventId, deleteSeries = false) {
+    const form = document.getElementById('deleteForm');
+    form.action = `/admin/events/${eventId}`;
+    
+    // Add delete_series parameter if needed
+    if (deleteSeries) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'delete_series';
+        input.value = '1';
+        form.appendChild(input);
+    }
+    
+    form.submit();
+}
+
+function showSuccessMessage(message) {
+    Swal.fire({
+        title: 'Success!',
+        text: message,
+        icon: 'success',
+        timer: 3000,
+        showConfirmButton: false
+    });
+}
+
+// Pass success message to JavaScript
+@if(session('success'))
+    document.addEventListener('DOMContentLoaded', function() {
+        showSuccessMessage('{{ session('success') }}');
+    });
+@endif
 </script>
 @endpush
 

@@ -113,6 +113,24 @@ class Event extends Model
         });
     }
 
+    /**
+     * Check if event is available for a specific department
+     * This is the main method used by EventJoinController
+     */
+    public function isAvailableForUserDepartment($userDepartment): bool
+    {
+        // If event is not exclusive (open event), it's available for all departments
+        if (!$this->is_exclusive) {
+            return true;
+        }
+
+        // If event is exclusive, check department restrictions
+        return $this->isAvailableForDepartment($userDepartment);
+    }
+
+    /**
+     * Original method kept for backward compatibility
+     */
     public function isAvailableForDepartment($department): bool
     {
         if (!$this->is_exclusive) {
@@ -130,10 +148,13 @@ class Event extends Model
         return false;
     }
 
-    public function getDepartmentDisplayAttribute(): string
+    /**
+     * Get departments that can access this event
+     */
+    public function getAccessibleDepartments(): array
     {
         if (!$this->is_exclusive) {
-            return 'All Departments';
+            return array_keys(self::DEPARTMENTS); // All departments
         }
 
         $departments = [];
@@ -142,11 +163,64 @@ class Event extends Model
             $departments[] = $this->department;
         }
 
-        if ($this->allowed_departments) {
+        if ($this->allowed_departments && is_array($this->allowed_departments)) {
             $departments = array_merge($departments, $this->allowed_departments);
         }
 
-        return implode(', ', array_unique($departments));
+        return array_unique($departments);
+    }
+
+    public function getDepartmentDisplayAttribute(): string
+    {
+        if (!$this->is_exclusive) {
+            return 'All Departments';
+        }
+
+        $departments = $this->getAccessibleDepartments();
+        return implode(', ', $departments);
+    }
+
+    /**
+     * Get full department names for display
+     */
+    public function getDepartmentNamesAttribute(): string
+    {
+        if (!$this->is_exclusive) {
+            return 'Open to All Departments';
+        }
+
+        $accessibleDepartments = $this->getAccessibleDepartments();
+        $departmentNames = [];
+
+        foreach ($accessibleDepartments as $deptCode) {
+            $departmentNames[] = self::DEPARTMENTS[$deptCode] ?? $deptCode;
+        }
+
+        return implode(', ', $departmentNames);
+    }
+
+    /**
+     * Check if a user can join this event based on their department
+     */
+    public function canUserJoin($user): bool
+    {
+        // Check if event is active
+        if ($this->status !== 'active') {
+            return false;
+        }
+
+        // Check if event is not in the past
+        if ($this->date < now()) {
+            return false;
+        }
+
+        // Check if user already joined
+        if ($this->isJoinedByUser($user->id)) {
+            return false;
+        }
+
+        // Check department restrictions
+        return $this->isAvailableForUserDepartment($user->department);
     }
 
     public function isRecurring(): bool
@@ -169,5 +243,19 @@ class Event extends Model
         $interval = $this->recurrence_interval > 1 ? " (Every {$this->recurrence_interval})" : '';
         
         return $pattern . $interval;
+    }
+
+    /**
+     * Get events available for a specific user's department
+     */
+    public static function availableForUser($user)
+    {
+        return static::where('status', 'active')
+                    ->where('date', '>=', now())
+                    ->where(function ($query) use ($user) {
+                        $query->where('is_exclusive', false)
+                              ->orWhere('department', $user->department)
+                              ->orWhereJsonContains('allowed_departments', $user->department);
+                    });
     }
 }

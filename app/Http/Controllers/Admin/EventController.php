@@ -118,11 +118,27 @@ class EventController extends Controller
 
     public function show(Event $event)
     {
-        $event->load(['childEvents' => function ($query) {
-            $query->orderBy('date', 'asc');
-        }]);
+        // Load child events and joined users with their departments
+        $event->load([
+            'childEvents' => function ($query) {
+                $query->orderBy('date', 'asc');
+            },
+            'joinedUsers' => function ($query) {
+                $query->select('users.id', 'users.first_name', 'users.last_name', 'users.department', 'users.email')
+                      ->withPivot('joined_at')
+                      ->orderBy('event_joins.joined_at', 'desc');
+            }
+        ]);
+
+        // Get department statistics for joined users
+        $departmentStats = $event->joinedUsers->groupBy('department')->map(function ($users) {
+            return [
+                'count' => $users->count(),
+                'users' => $users
+            ];
+        });
         
-        return view('admin.events.show', compact('event'));
+        return view('admin.events.show', compact('event', 'departmentStats'));
     }
 
     public function edit(Event $event)
@@ -199,7 +215,7 @@ class EventController extends Controller
      */
     public function printSummary(Request $request)
     {
-        $query = Event::with(['childEvents']);
+        $query = Event::with(['childEvents', 'joinedUsers']);
 
         // Apply same filters as index
         if ($request->filled('search')) {
@@ -239,6 +255,12 @@ class EventController extends Controller
                                     ->map->count(),
             'upcoming' => $events->where('date', '>=', now())->count(),
             'past' => $events->where('date', '<', now())->count(),
+            'total_participants' => $events->sum(function($event) {
+                return $event->joinedUsers->count();
+            }),
+            'participants_by_department' => $events->flatMap(function($event) {
+                return $event->joinedUsers;
+            })->groupBy('department')->map->count(),
         ];
 
         return view('admin.events.print-summary', compact('events', 'stats', 'request'));
@@ -291,7 +313,19 @@ class EventController extends Controller
             $rules['date'] = 'required|date|after:now';
         }
 
-        return $request->validate($rules);
+        // Custom validation for exclusive events
+        $validated = $request->validate($rules);
+
+        // Additional validation for exclusive events
+        if ($request->boolean('is_exclusive')) {
+            if (empty($validated['department']) && empty($validated['allowed_departments'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'department' => 'For exclusive events, you must specify at least one department or select allowed departments.'
+                ]);
+            }
+        }
+
+        return $validated;
     }
 
     /**
@@ -302,7 +336,7 @@ class EventController extends Controller
         if ($request->boolean('is_exclusive')) {
             $validated['is_exclusive'] = true;
             
-            // Ensure primary department is set for exclusive events
+            // Ensure at least one department is specified for exclusive events
             if (empty($validated['department']) && empty($validated['allowed_departments'])) {
                 $validated['department'] = array_keys(self::DEPARTMENTS)[0]; // Default to first department
             }

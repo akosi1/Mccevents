@@ -1,59 +1,59 @@
-// Events Index JavaScript
+// Events Index JavaScript - Complete functionality
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Load create form when modal is shown
-    const createModal = document.getElementById('createEventModal');
-    if (createModal) {
-        createModal.addEventListener('show.bs.modal', function () {
-            loadCreateForm();
+// View event function
+function viewEvent(eventId) {
+    fetch(`/admin/events/${eventId}`)
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('viewEventContent').innerHTML = html;
+            new bootstrap.Modal(document.getElementById('viewEventModal')).show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire('Error!', 'Failed to load event details.', 'error');
         });
-    }
+}
 
-    // Delete confirmation
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const eventId = this.dataset.eventId;
-            const title = this.dataset.title;
-            
+// Success message handler
+function showSuccessMessage(message) {
+    Swal.fire({
+        title: 'Success!',
+        text: message,
+        icon: 'success',
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+    });
+}
+
+// Edit event function
+function editEvent(eventId) {
+    // Load edit form via AJAX
+    fetch(`/admin/events/${eventId}/edit`)
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('editEventFormContainer').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Error loading edit form:', error);
             Swal.fire({
-                title: 'Delete Event?',
-                html: `Are you sure you want to delete "<strong>${title}</strong>"?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, Delete',
-                cancelButtonText: 'Cancel',
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d'
-            }).then(result => {
-                if (result.isConfirmed) {
-                    const form = document.getElementById('deleteForm');
-                    form.action = `/admin/events/${eventId}`;
-                    form.submit();
-                }
+                title: 'Error',
+                text: 'Failed to load edit form. Please try again.',
+                icon: 'error'
             });
         });
-    });
+}
 
-    // Search with debounce
-    let searchTimeout;
-    const searchInput = document.querySelector('input[name="search"]');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => this.form.submit(), 500);
-        });
-    }
-});
-
-// Load create form
+// Load create form function
 function loadCreateForm() {
     const container = document.getElementById('createEventFormContainer');
     const baseUrl = window.location.origin;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     
     container.innerHTML = `
         <form action="${baseUrl}/admin/events" method="POST" enctype="multipart/form-data" id="createEventForm">
-            <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]').getAttribute('content')}">
+            <input type="hidden" name="_token" value="${csrfToken}">
             
             <!-- Basic Info -->
             <div class="row">
@@ -235,38 +235,308 @@ function removeCreatePreview() {
     document.getElementById('create_imagePreview').style.display = 'none';
 }
 
-// Edit event function
-function editEvent(eventId) {
-    // Load edit form via AJAX
-    fetch(`/admin/events/${eventId}/edit`)
-        .then(response => response.text())
-        .then(html => {
-            document.getElementById('editEventFormContainer').innerHTML = html;
-        })
-        .catch(error => {
-            console.error('Error loading edit form:', error);
-            Swal.fire({
-                title: 'Error',
-                text: 'Failed to load edit form. Please try again.',
-                icon: 'error'
-            });
+// Live Search Implementation
+function initializeLiveSearch() {
+    const searchInput = document.getElementById('liveSearchInput');
+    const eventsTableBody = document.getElementById('eventsTableBody');
+    const searchSpinner = document.getElementById('searchSpinner');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const searchResultsInfo = document.getElementById('searchResultsInfo');
+    const searchResultsText = document.getElementById('searchResultsText');
+    const clearSearchResults = document.getElementById('clearSearchResults');
+    const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+    const paginationSection = document.getElementById('paginationSection');
+    
+    if (!searchInput || !eventsTableBody) return;
+    
+    let searchTimeout;
+    let originalRows = Array.from(eventsTableBody.querySelectorAll('.event-row'));
+    let isSearching = false;
+    
+    // Search input event listener
+    searchInput.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.trim();
+        
+        clearTimeout(searchTimeout);
+        
+        if (searchTerm === '') {
+            clearSearch();
+            return;
+        }
+        
+        // Show spinner and clear button
+        showSearchSpinner();
+        showClearButton();
+        
+        searchTimeout = setTimeout(() => {
+            performLiveSearch(searchTerm);
+        }, 200);
+    });
+    
+    // Clear search button
+    clearSearchBtn.addEventListener('click', function() {
+        searchInput.value = '';
+        clearSearch();
+        searchInput.focus();
+    });
+    
+    // Clear search results button
+    if (clearSearchResults) {
+        clearSearchResults.addEventListener('click', function() {
+            searchInput.value = '';
+            clearSearch();
         });
+    }
+    
+    // Reset filters button
+    resetFiltersBtn.addEventListener('click', function() {
+        // Reset all form inputs
+        const form = document.getElementById('filtersForm');
+        form.reset();
+        searchInput.value = '';
+        clearSearch();
+        
+        // Redirect to clean URL
+        window.location.href = window.location.pathname;
+    });
+    
+    function performLiveSearch(searchTerm) {
+        isSearching = true;
+        const searchTermLower = searchTerm.toLowerCase();
+        let visibleCount = 0;
+        let matchedEvents = [];
+        
+        originalRows.forEach(row => {
+            const searchableText = row.dataset.searchable || '';
+            const matches = searchableText.includes(searchTermLower);
+            
+            if (matches) {
+                row.style.display = '';
+                row.classList.add('highlight-match');
+                visibleCount++;
+                matchedEvents.push(row);
+                
+                // Highlight matching text
+                highlightMatches(row, searchTerm);
+            } else {
+                row.style.display = 'none';
+                row.classList.remove('highlight-match');
+                removeHighlights(row);
+            }
+        });
+        
+        // Update search results info
+        updateSearchResultsInfo(visibleCount, searchTerm);
+        
+        // Hide pagination during search
+        if (paginationSection) {
+            paginationSection.style.display = visibleCount === 0 ? 'none' : 'none';
+        }
+        
+        hideSearchSpinner();
+        
+        // Show no results message if needed
+        showNoResultsMessage(visibleCount, searchTerm);
+    }
+    
+    function clearSearch() {
+        isSearching = false;
+        
+        // Show all rows
+        originalRows.forEach(row => {
+            row.style.display = '';
+            row.classList.remove('highlight-match');
+            removeHighlights(row);
+        });
+        
+        // Hide search UI elements
+        hideSearchSpinner();
+        hideClearButton();
+        hideSearchResultsInfo();
+        hideNoResultsMessage();
+        
+        // Show pagination
+        if (paginationSection) {
+            paginationSection.style.display = 'flex';
+        }
+    }
+    
+    function highlightMatches(row, searchTerm) {
+        const elements = row.querySelectorAll('h6, small, .text-muted');
+        const regex = new RegExp(`(${escapeRegex(searchTerm)})`, 'gi');
+        
+        elements.forEach(element => {
+            if (!element.innerHTML.includes('<span class="search-match">')) {
+                element.innerHTML = element.innerHTML.replace(regex, '<span class="search-match">$1</span>');
+            }
+        });
+    }
+    
+    function removeHighlights(row) {
+        const highlights = row.querySelectorAll('.search-match');
+        highlights.forEach(highlight => {
+            const parent = highlight.parentNode;
+            parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+            parent.normalize();
+        });
+    }
+    
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+    
+    function updateSearchResultsInfo(count, searchTerm) {
+        if (count > 0) {
+            searchResultsText.textContent = `Found ${count} event${count !== 1 ? 's' : ''} matching "${searchTerm}"`;
+            searchResultsInfo.style.display = 'block';
+        } else {
+            hideSearchResultsInfo();
+        }
+    }
+    
+    function showNoResultsMessage(visibleCount, searchTerm) {
+        let noResultsRow = document.getElementById('noSearchResultsRow');
+        
+        if (visibleCount === 0 && searchTerm !== '') {
+            if (!noResultsRow) {
+                noResultsRow = document.createElement('tr');
+                noResultsRow.id = 'noSearchResultsRow';
+                noResultsRow.innerHTML = `
+                    <td colspan="9" class="text-center py-5">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted mb-2">No events found for "${searchTerm}"</h6>
+                        <p class="text-muted mb-3">Try adjusting your search terms or check your spelling</p>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('liveSearchInput').value=''; clearSearch(); document.getElementById('liveSearchInput').focus();">
+                            <i class="fas fa-times me-1"></i>Clear Search
+                        </button>
+                    </td>
+                `;
+                eventsTableBody.appendChild(noResultsRow);
+            }
+        }
+    }
+    
+    function hideNoResultsMessage() {
+        const noResultsRow = document.getElementById('noSearchResultsRow');
+        if (noResultsRow) {
+            noResultsRow.remove();
+        }
+    }
+    
+    function showSearchSpinner() {
+        searchSpinner.style.display = 'block';
+    }
+    
+    function hideSearchSpinner() {
+        searchSpinner.style.display = 'none';
+    }
+    
+    function showClearButton() {
+        clearSearchBtn.style.display = 'block';
+    }
+    
+    function hideClearButton() {
+        clearSearchBtn.style.display = 'none';
+    }
+    
+    function hideSearchResultsInfo() {
+        searchResultsInfo.style.display = 'none';
+    }
 }
 
-// View event function
-function viewEvent(eventId) {
-    window.location.href = `/admin/events/${eventId}`;
-}
-
-// Success message handler
-function showSuccessMessage(message) {
-    Swal.fire({
-        title: 'Success!',
-        text: message,
-        icon: 'success',
-        timer: 3000,
-        showConfirmButton: false,
-        toast: true,
-        position: 'top-end'
+// Initialize delete buttons
+function initializeDeleteButtons() {
+    const deleteButtons = document.querySelectorAll('.delete-btn');
+    
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const eventId = this.dataset.eventId;
+            const title = this.dataset.title;
+            const isRecurring = this.dataset.isRecurring === 'true';
+            
+            let confirmText = `Are you sure you want to delete "${title}"?`;
+            let confirmButtonText = 'Yes, delete it!';
+            
+            if (isRecurring) {
+                confirmText = `This is a recurring event. How would you like to proceed?`;
+            }
+            
+            if (isRecurring) {
+                // Special handling for recurring events
+                Swal.fire({
+                    title: 'Delete Recurring Event',
+                    text: confirmText,
+                    icon: 'warning',
+                    showDenyButton: true,
+                    showCancelButton: true,
+                    confirmButtonText: 'Delete entire series',
+                    denyButtonText: 'Delete only this event',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#d33',
+                    denyButtonColor: '#3085d6'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        deleteEvent(eventId, true); // Delete series
+                    } else if (result.isDenied) {
+                        deleteEvent(eventId, false); // Delete single
+                    }
+                });
+            } else {
+                // Regular delete confirmation
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: confirmText,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: confirmButtonText
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        deleteEvent(eventId, false);
+                    }
+                });
+            }
+        });
     });
 }
+
+function deleteEvent(eventId, deleteSeries = false) {
+    const form = document.getElementById('deleteForm');
+    form.action = `/admin/events/${eventId}`;
+    
+    // Add delete_series parameter if needed
+    if (deleteSeries) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'delete_series';
+        input.value = '1';
+        form.appendChild(input);
+    }
+    
+    form.submit();
+}
+
+// Main DOMContentLoaded event listener
+document.addEventListener('DOMContentLoaded', function() {
+    initializeLiveSearch();
+    initializeDeleteButtons();
+    
+    // Load create form when modal is shown
+    const createModal = document.getElementById('createEventModal');
+    if (createModal) {
+        createModal.addEventListener('show.bs.modal', function () {
+            loadCreateForm();
+        });
+    }
+
+    // Search with debounce for regular filter
+    let searchTimeout;
+    const filterSearchInput = document.querySelector('input[name="search"]');
+    if (filterSearchInput) {
+        filterSearchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => this.form.submit(), 500);
+        });
+    }
+});

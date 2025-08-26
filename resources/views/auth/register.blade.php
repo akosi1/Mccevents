@@ -39,6 +39,19 @@
                     <x-input-error :messages="$errors->get('email')" class="error-msg" />
                 </div>
 
+                <div class="form-group">
+                    <i class="fas fa-graduation-cap"></i>
+                    <select id="department" name="department" required>
+                        <option value="">Select Department</option>
+                        <option value="BSIT" {{ old('department') == 'BSIT' ? 'selected' : '' }}>Bachelor of Science in Information Technology</option>
+                        <option value="BSBA" {{ old('department') == 'BSBA' ? 'selected' : '' }}>Bachelor of Science in Business Administration</option>
+                        <option value="BSED" {{ old('department') == 'BSED' ? 'selected' : '' }}>Bachelor of Science in Education</option>
+                        <option value="BEED" {{ old('department') == 'BEED' ? 'selected' : '' }}>Bachelor of Elementary Education</option>
+                        <option value="BSHM" {{ old('department') == 'BSHM' ? 'selected' : '' }}>Bachelor of Science in Hospitality Management</option>
+                    </select>
+                    <x-input-error :messages="$errors->get('department')" class="error-msg" />
+                </div>
+
                 <div class="form-row">
                     <div class="form-group">
                         <i class="fas fa-lock"></i>
@@ -145,7 +158,8 @@
             z-index: 1;
         }
 
-        .form-group input {
+        .form-group input,
+        .form-group select {
             width: 100%;
             padding: 10px 12px 10px 38px;
             border: 2px solid #e1e8ed;
@@ -155,7 +169,24 @@
             transition: all 0.3s ease;
         }
 
-        .form-group input:focus {
+        .form-group select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667eea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        .form-group select option {
+            padding: 8px 12px;
+            background: white;
+            color: #333;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
             outline: none;
             border-color: #667eea;
             background: white;
@@ -226,7 +257,8 @@
 
         @media (max-width: 400px) {
             .auth-container { max-width: 100%; }
-            .form-group input { font-size: 0.85rem; }
+            .form-group input,
+            .form-group select { font-size: 0.85rem; }
         }
     </style>
 </x-guest-layout>

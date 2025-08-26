@@ -12,7 +12,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'first_name', 'middle_name', 'last_name', 
-        'email', 'password', 'role', 'status'
+        'email', 'password', 'role', 'status', 'department'
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -36,9 +36,33 @@ class User extends Authenticatable
         return trim($this->first_name . $middleInitial . ' ' . $this->last_name);
     }
 
+    /**
+     * Get the department name.
+     */
+    public function getDepartmentNameAttribute(): string
+    {
+        $departments = [
+            'BSIT' => 'Bachelor of Science in Information Technology',
+            'BSBA' => 'Bachelor of Science in Business Administration',
+            'BSED' => 'Bachelor of Science in Education',
+            'BEED' => 'Bachelor of Elementary Education',
+            'BSHM' => 'Bachelor of Science in Hospitality Management'
+        ];
+
+        return $departments[$this->department] ?? $this->department;
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    /**
+     * Check if user belongs to a specific department.
+     */
+    public function belongsToDepartment(string $department): bool
+    {
+        return $this->department === $department;
     }
 
     public function eventJoins(): HasMany

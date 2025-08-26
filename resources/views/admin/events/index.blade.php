@@ -30,10 +30,18 @@
     <!-- Enhanced Filters -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body p-3">
-            <form method="GET" class="row g-3">
+            <form method="GET" class="row g-3" id="filtersForm">
                 <div class="col-md-3">
-                    <input type="text" class="form-control" name="search" 
-                           value="{{ request('search') }}" placeholder="Search events...">
+                    <div class="position-relative">
+                        <input type="text" class="form-control" name="search" id="liveSearchInput"
+                               value="{{ request('search') }}" placeholder="Search events..." autocomplete="off">
+                        <div class="live-search-spinner" id="searchSpinner" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                        <button type="button" class="clear-search-btn" id="clearSearchBtn" style="display: none;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="col-md-2">
                     <select class="form-select" name="status" onchange="this.form.submit()">
@@ -70,8 +78,8 @@
                     </select>
                 </div>
                 <div class="col-md-1">
-                    <button type="submit" class="btn btn-outline-primary w-100">
-                        <i class="fas fa-search"></i>
+                    <button type="button" class="btn btn-outline-primary w-100" id="resetFiltersBtn" title="Reset All Filters">
+                        <i class="fas fa-refresh"></i>
                     </button>
                 </div>
             </form>
@@ -79,110 +87,121 @@
     </div>
 
     @if($events->count())
+        <!-- Search Results Counter -->
+        <div class="search-results-info mb-3" id="searchResultsInfo" style="display: none;">
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle me-2"></i>
+                <span id="searchResultsText"></span>
+                <button type="button" class="btn btn-sm btn-outline-info ms-2" id="clearSearchResults">
+                    Clear Search
+                </button>
+            </div>
+        </div>
+
         <!-- Events Table -->
         <div class="card border-0 shadow-sm">
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 table-compact">
                     <thead class="bg-light">
                         <tr>
-                            <th class="ps-4 py-3">#</th>
-                            <th class="py-3">Image</th>
-                            <th class="py-3">Event</th>
-                            <th class="py-3">Date & Time</th>
-                            <th class="py-3">Access</th>
-                            <th class="py-3">Type</th>
-                            <th class="py-3">Status</th>
-                            <th class="py-3">Location</th>
-                            <th class="py-3 text-center">Actions</th>
+                            <th class="ps-3 py-2">#</th>
+                            <th class="py-2">Image</th>
+                            <th class="py-2">Event</th>
+                            <th class="py-2">Date & Time</th>
+                            <th class="py-2">Access</th>
+                            <th class="py-2">Type</th>
+                            <th class="py-2">Status</th>
+                            <th class="py-2">Location</th>
+                            <th class="py-2 text-center">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="eventsTableBody">
                         @foreach($events as $event)
-                        <tr>
-                            <td class="ps-4 py-3 align-middle">
-                                <span class="text-muted fw-medium">#{{ $event->id }}</span>
+                        <tr class="event-row compact-row" data-searchable="{{ strtolower($event->title . ' ' . $event->description . ' ' . $event->location . ' #' . $event->id) }}">
+                            <td class="ps-3 py-2 align-middle">
+                                <span class="text-muted fw-medium small">#{{ $event->id }}</span>
                                 @if($event->isRecurring())
-                                    <div><small class="badge bg-info">Series</small></div>
+                                    <div><small class="badge bg-info badge-xs">Series</small></div>
                                 @endif
                             </td>
-                            <td class="py-3 align-middle">
-                                <div class="event-image">
+                            <td class="py-2 align-middle">
+                                <div class="event-image-compact">
                                     @if($event->image && file_exists(public_path('storage/' . $event->image)))
                                         <img src="{{ asset('storage/' . $event->image) }}" 
                                              alt="{{ $event->title }}" 
-                                             class="event-img"
-                                             onerror="this.parentElement.innerHTML='<div class=\'no-image\'><i class=\'fas fa-image\'></i></div>'">
+                                             class="event-img-compact"
+                                             onerror="this.parentElement.innerHTML='<div class=\'no-image-compact\'><i class=\'fas fa-image\'></i></div>'">
                                     @elseif($event->image)
                                         <img src="{{ $event->image }}" 
                                              alt="{{ $event->title }}" 
-                                             class="event-img"
-                                             onerror="this.parentElement.innerHTML='<div class=\'no-image\'><i class=\'fas fa-image\'></i></div>'">
+                                             class="event-img-compact"
+                                             onerror="this.parentElement.innerHTML='<div class=\'no-image-compact\'><i class=\'fas fa-image\'></i></div>'">
                                     @else
-                                        <div class="no-image">
+                                        <div class="no-image-compact">
                                             <i class="fas fa-image"></i>
                                         </div>
                                     @endif
                                 </div>
                             </td>
-                            <td class="py-3 align-middle">
+                            <td class="py-2 align-middle">
                                 <div>
-                                    <h6 class="mb-1 fw-semibold">{{ Str::limit($event->title, 35) }}</h6>
-                                    <small class="text-muted">{{ Str::limit($event->description, 50) }}</small>
+                                    <h6 class="mb-1 fw-semibold event-title-compact">{{ Str::limit($event->title, 35) }}</h6>
+                                    <small class="text-muted event-desc-compact">{{ Str::limit($event->description, 50) }}</small>
                                     @if($event->isRecurring())
-                                        <div><small class="text-info"><i class="fas fa-redo me-1"></i>{{ $event->recurrence_display }}</small></div>
+                                        <div><small class="text-info recurrence-compact"><i class="fas fa-redo me-1"></i>{{ $event->recurrence_display }}</small></div>
                                     @endif
                                 </div>
                             </td>
-                            <td class="py-3 align-middle">
-                                <div class="fw-medium">{{ $event->date->format('M d, Y') }}</div>
+                            <td class="py-2 align-middle">
+                                <div class="fw-medium date-compact">{{ $event->date->format('M d, Y') }}</div>
                                 @if($event->start_time)
-                                    <small class="text-muted">{{ $event->start_time->format('h:i A') }}</small>
+                                    <small class="text-muted time-compact">{{ $event->start_time->format('h:i A') }}</small>
                                     @if($event->end_time)
-                                        <small class="text-muted"> - {{ $event->end_time->format('h:i A') }}</small>
+                                        <small class="text-muted time-compact"> - {{ $event->end_time->format('h:i A') }}</small>
                                     @endif
                                 @endif
                             </td>
-                            <td class="py-3 align-middle">
+                            <td class="py-2 align-middle">
                                 @if($event->is_exclusive)
-                                    <span class="badge bg-warning text-dark" title="{{ $event->department_display }}">
+                                    <span class="badge bg-warning text-dark badge-compact" title="{{ $event->department_display }}">
                                         <i class="fas fa-lock me-1"></i>Exclusive
                                     </span>
-                                    <div><small class="text-muted">{{ Str::limit($event->department_display, 20) }}</small></div>
+                                    <div><small class="text-muted dept-compact">{{ Str::limit($event->department_display, 20) }}</small></div>
                                 @else
-                                    <span class="badge bg-success">
+                                    <span class="badge bg-success badge-compact">
                                         <i class="fas fa-globe me-1"></i>Open to All
                                     </span>
                                 @endif
                             </td>
-                            <td class="py-3 align-middle">
+                            <td class="py-2 align-middle">
                                 @if($event->is_recurring)
-                                    <span class="badge bg-info">
+                                    <span class="badge bg-info badge-compact">
                                         <i class="fas fa-redo me-1"></i>Recurring
                                     </span>
-                                    <div><small class="text-muted">{{ $event->childEvents->count() + 1 }} events</small></div>
+                                    <div><small class="text-muted type-count-compact">{{ $event->childEvents->count() + 1 }} events</small></div>
                                 @else
-                                    <span class="badge bg-secondary">
+                                    <span class="badge bg-secondary badge-compact">
                                         <i class="fas fa-calendar me-1"></i>One-time
                                     </span>
                                 @endif
                             </td>
-                            <td class="py-3 align-middle">
-                                <span class="badge status-{{ $event->status }}">
+                            <td class="py-2 align-middle">
+                                <span class="badge status-{{ $event->status }} badge-compact">
                                     {{ ucfirst($event->status) }}
                                 </span>
                             </td>
-                            <td class="py-3 align-middle">
-                                <span class="text-muted" title="{{ $event->location }}">{{ Str::limit($event->location, 20) }}</span>
+                            <td class="py-2 align-middle">
+                                <span class="text-muted location-compact" title="{{ $event->location }}">{{ Str::limit($event->location, 20) }}</span>
                             </td>
-                            <td class="py-3 align-middle text-center">
-                                <div class="action-buttons d-flex justify-content-center gap-1">
-                                    <button class="btn btn-clean btn-view" title="View" onclick="viewEvent({{ $event->id }})">
+                            <td class="py-2 align-middle text-center">
+                                <div class="action-buttons-compact d-flex justify-content-center gap-1">
+                                    <button class="btn btn-clean-compact btn-view" title="View" onclick="viewEvent({{ $event->id }})">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <a href="{{ route('admin.events.edit', $event) }}" class="btn btn-clean btn-edit" title="Edit">
+                                    <a href="{{ route('admin.events.edit', $event) }}" class="btn btn-clean-compact btn-edit" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <button class="btn btn-clean btn-delete delete-btn" title="Delete" 
+                                    <button class="btn btn-clean-compact btn-delete delete-btn" title="Delete" 
                                             data-event-id="{{ $event->id }}" 
                                             data-title="{{ $event->title }}"
                                             data-is-recurring="{{ $event->is_recurring ? 'true' : 'false' }}">
@@ -199,7 +218,7 @@
 
         <!-- Enhanced Pagination -->
         @if($events->hasPages())
-        <div class="d-flex justify-content-between align-items-center mt-4">
+        <div class="d-flex justify-content-between align-items-center mt-4" id="paginationSection">
             <div class="pagination-info">
                 <span class="text-muted">
                     Showing {{ $events->firstItem() }}-{{ $events->lastItem() }} of {{ $events->total() }} results
@@ -284,149 +303,18 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/admin/events-index.css') }}">
-<style>
-    .event-image {
-        width: 60px;
-        height: 60px;
-        border-radius: 8px;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f8f9fa;
-    }
-    .event-img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    .no-image {
-        color: #6c757d;
-        font-size: 1.2rem;
-    }
-    .status-active { background-color: #28a745; }
-    .status-postponed { background-color: #ffc107; color: #212529; }
-    .status-cancelled { background-color: #dc3545; }
-    .btn-clean {
-        border: none;
-        background: none;
-        padding: 6px 8px;
-        border-radius: 4px;
-        transition: background-color 0.2s;
-    }
-    .btn-view:hover { background-color: #e3f2fd; color: #1976d2; }
-    .btn-edit:hover { background-color: #fff3e0; color: #f57c00; }
-    .btn-delete:hover { background-color: #ffebee; color: #d32f2f; }
-</style>
 @endpush
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-// View event function
-function viewEvent(eventId) {
-    fetch(`/admin/events/${eventId}`)
-        .then(response => response.text())
-        .then(html => {
-            document.getElementById('viewEventContent').innerHTML = html;
-            new bootstrap.Modal(document.getElementById('viewEventModal')).show();
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            Swal.fire('Error!', 'Failed to load event details.', 'error');
-        });
-}
-
-// Enhanced delete function for recurring events
-document.addEventListener('DOMContentLoaded', function() {
-    const deleteButtons = document.querySelectorAll('.delete-btn');
-    
-    deleteButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const eventId = this.dataset.eventId;
-            const title = this.dataset.title;
-            const isRecurring = this.dataset.isRecurring === 'true';
-            
-            let confirmText = `Are you sure you want to delete "${title}"?`;
-            let confirmButtonText = 'Yes, delete it!';
-            
-            if (isRecurring) {
-                confirmText = `This is a recurring event. How would you like to proceed?`;
-            }
-            
-            if (isRecurring) {
-                // Special handling for recurring events
-                Swal.fire({
-                    title: 'Delete Recurring Event',
-                    text: confirmText,
-                    icon: 'warning',
-                    showDenyButton: true,
-                    showCancelButton: true,
-                    confirmButtonText: 'Delete entire series',
-                    denyButtonText: 'Delete only this event',
-                    cancelButtonText: 'Cancel',
-                    confirmButtonColor: '#d33',
-                    denyButtonColor: '#3085d6'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        deleteEvent(eventId, true); // Delete series
-                    } else if (result.isDenied) {
-                        deleteEvent(eventId, false); // Delete single
-                    }
-                });
-            } else {
-                // Regular delete confirmation
-                Swal.fire({
-                    title: 'Are you sure?',
-                    text: confirmText,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
-                    confirmButtonText: confirmButtonText
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        deleteEvent(eventId, false);
-                    }
-                });
-            }
-        });
-    });
-});
-
-function deleteEvent(eventId, deleteSeries = false) {
-    const form = document.getElementById('deleteForm');
-    form.action = `/admin/events/${eventId}`;
-    
-    // Add delete_series parameter if needed
-    if (deleteSeries) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'delete_series';
-        input.value = '1';
-        form.appendChild(input);
-    }
-    
-    form.submit();
-}
-
-function showSuccessMessage(message) {
-    Swal.fire({
-        title: 'Success!',
-        text: message,
-        icon: 'success',
-        timer: 3000,
-        showConfirmButton: false
-    });
-}
-
-// Pass success message to JavaScript
+<script src="{{ asset('js/admin/events-index.js') }}"></script>
 @if(session('success'))
-    document.addEventListener('DOMContentLoaded', function() {
-        showSuccessMessage('{{ session('success') }}');
-    });
-@endif
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    showSuccessMessage('{{ session('success') }}');
+});
 </script>
+@endif
 @endpush
 
 @endsection

@@ -9,15 +9,42 @@ class EventJoinController extends Controller
 {
     public function join(Request $request, Event $event)
     {
-        if ($event->isJoinedByUser(auth()->id())) {
+        $user = auth()->user();
+        
+        // Check if user has already joined this event
+        if ($event->isJoinedByUser($user->id)) {
             return response()->json([
                 'success' => false,
                 'message' => 'You have already joined this event.'
             ]);
         }
 
+        // Check if user can join this event based on department restrictions
+        if (!$event->isAvailableForUserDepartment($user->department)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This event is not available for your department (' . $user->getDepartmentNameAttribute() . ').'
+            ]);
+        }
+
+        // Check event status
+        if ($event->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => 'This event is not available for joining.'
+            ]);
+        }
+
+        // Check if event is in the past
+        if ($event->date < now()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot join past events.'
+            ]);
+        }
+
         EventJoin::create([
-            'user_id' => auth()->id(),
+            'user_id' => $user->id,
             'event_id' => $event->id,
             'joined_at' => now()
         ]);
@@ -25,11 +52,12 @@ class EventJoinController extends Controller
         // Create notification for admin
         Notification::create([
             'type' => 'event_join',
-            'message' => auth()->user()->full_name . ' joined "' . $event->title . '"',
+            'message' => $user->full_name . ' (' . $user->department . ') joined "' . $event->title . '"',
             'data' => [
-                'user_id' => auth()->id(),
+                'user_id' => $user->id,
                 'event_id' => $event->id,
-                'user_name' => auth()->user()->full_name,
+                'user_name' => $user->full_name,
+                'user_department' => $user->department,
                 'event_title' => $event->title
             ]
         ]);
@@ -42,7 +70,9 @@ class EventJoinController extends Controller
 
     public function leave(Request $request, Event $event)
     {
-        $join = EventJoin::where('user_id', auth()->id())
+        $user = auth()->user();
+        
+        $join = EventJoin::where('user_id', $user->id)
                          ->where('event_id', $event->id)
                          ->first();
 
@@ -53,7 +83,28 @@ class EventJoinController extends Controller
             ]);
         }
 
+        // Check if event is in the past
+        if ($event->date < now()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot leave past events.'
+            ]);
+        }
+
         $join->delete();
+
+        // Create notification for admin about leaving
+        Notification::create([
+            'type' => 'event_leave',
+            'message' => $user->full_name . ' (' . $user->department . ') left "' . $event->title . '"',
+            'data' => [
+                'user_id' => $user->id,
+                'event_id' => $event->id,
+                'user_name' => $user->full_name,
+                'user_department' => $user->department,
+                'event_title' => $event->title
+            ]
+        ]);
 
         return response()->json([
             'success' => true,

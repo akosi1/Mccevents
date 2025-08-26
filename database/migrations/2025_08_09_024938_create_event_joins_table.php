@@ -15,11 +15,16 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('event_id')->constrained()->onDelete('cascade');
-            $table->datetime('joined_at')->default(now());
+            $table->timestamp('joined_at')->nullable();
             $table->timestamps();
-            
-            // Prevent duplicate joins
+
+            // Ensure a user can only join an event once
             $table->unique(['user_id', 'event_id']);
+            
+            // Add indexes for better performance
+            $table->index('user_id');
+            $table->index('event_id');
+            $table->index('joined_at');
         });
     }
 
