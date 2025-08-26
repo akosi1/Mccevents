@@ -9,15 +9,15 @@ define('LARAVEL_START', microtime(true));
 $root = dirname(__DIR__);
 
 // Maintenance mode check
-if (file_exists($root . '/../storage/framework/maintenance.php')) {
-    require $root . '/../storage/framework/maintenance.php';
+if (file_exists($root . '/storage/framework/maintenance.php')) {
+    require $root . '/storage/framework/maintenance.php';
 }
 
 // Composer autoloader
-require $root . '/../vendor/autoload.php';
+require $root . '/vendor/autoload.php';
 
 // Bootstrap the framework
-$app = require_once $root . '/../bootstrap/app.php';
+$app = require_once $root . '/bootstrap/app.php';
 
 // Create kernel
 $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
