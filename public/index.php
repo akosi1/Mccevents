@@ -5,7 +5,7 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-$root = __DIR__; // root = public_html
+$root = dirname(__DIR__); // go one level up from public/
 
 if (file_exists($root.'/storage/framework/maintenance.php')) {
     require $root.'/storage/framework/maintenance.php';
