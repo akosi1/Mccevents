@@ -1,4 +1,13 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # ✅ Allow static files inside public
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # ✅ Redirect css, js, images to /public
+    RewriteRule ^(css|js|images|storage)/(.*)$ public/$1/$2 [L]
+
+    # 🚀 Send everything else to Laravel
     RewriteRule ^ index.php [L]
 </IfModule>
