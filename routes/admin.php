@@ -13,7 +13,7 @@ Route::post('/login', [AuthController::class, 'login'])->name('admin.login.post'
 
 // Admin Protected Routes
 Route::middleware(['admin'])->group(function () {
-    Route::get('/../dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
     
     // Logout routes - support both GET and POST
     Route::get('/logout', [AuthController::class, 'logout'])->name('admin.logout.get');
