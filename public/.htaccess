@@ -1,14 +1,14 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # ✅ Allow direct access to existing files (PHP, CSS, JS, images, etc.)
+    # ✅ If the request is for an existing file (like try.php, css, js, images), serve it directly
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 
-    # ✅ Allow direct access to existing directories
+    # ✅ If the request is for an existing folder, serve it directly
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # 🚀 Otherwise, send everything into Laravel
+    # 🚀 Otherwise, send everything else to Laravel (index.php)
     RewriteRule ^ index.php [L]
 </IfModule>
