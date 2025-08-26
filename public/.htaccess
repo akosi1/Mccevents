@@ -8,14 +8,17 @@
     # Redirect Trailing Slashes
     RewriteRule ^(.*)/$ /$1 [L,R=301]
 
-    # Handle Front Controller
+    # Send all requests to index.php
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
 
-# Protect sensitive files
-<FilesMatch "^(\.env|composer\.json|composer\.lock|artisan|package\.json|webpack\.mix\.js|yarn\.lock|phpunit\.xml)$">
+# Block sensitive files
+<FilesMatch "^(\.env|artisan|composer\.(json|lock)|package\.json|package-lock\.json|phpunit\.xml|vite\.config\.js|webpack\.mix\.js)$">
     Order allow,deny
     Deny from all
 </FilesMatch>
+
+# Block storage & vendor folders
+RedirectMatch 403 ^/(storage|vendor|bootstrap|config|resources|routes|tests)(.*)$
