@@ -5,18 +5,17 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-// Adjust base path since Laravel core is also inside public_html
-$root = __DIR__;
+$root = __DIR__ . '/..';  // Laravel root (parent of public_html)
 
-// Check for maintenance mode
+// Check for maintenance
 if (file_exists($root.'/storage/framework/maintenance.php')) {
     require $root.'/storage/framework/maintenance.php';
 }
 
-// Load Composer
+// Composer autoload
 require $root.'/vendor/autoload.php';
 
-// Bootstrap the app
+// Bootstrap Laravel
 $app = require_once $root.'/bootstrap/app.php';
 
 // Handle request
