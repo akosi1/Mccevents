@@ -16,13 +16,13 @@ Route::middleware(['admin'])->group(function () {
     Route::get('/../dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
     
     // Logout routes - support both GET and POST
-    Route::get('/../logout', [AuthController::class, 'logout'])->name('admin.logout.get');
-    Route::post('/../logout', [AuthController::class, 'logout'])->name('admin.logout');
+    Route::get('/logout', [AuthController::class, 'logout'])->name('admin.logout.get');
+    Route::post('/logout', [AuthController::class, 'logout'])->name('admin.logout');
     
-    Route::resource('/../events', EventController::class)->names('admin.events');
+    Route::resource('/events', EventController::class)->names('admin.events');
     
     // Fixed print summary route - moved inside middleware group and fixed path
-    Route::get('/../events/print/summary', [EventController::class, 'printSummary'])->name('admin.events.print-summary');
+    Route::get('/events/print/summary', [EventController::class, 'printSummary'])->name('admin.events.print-summary');
     
     Route::resource('/users', UserController::class)->names('admin.users');
     Route::get('/certificates', [AdminController::class, 'certificates'])->name('admin.certificates');
