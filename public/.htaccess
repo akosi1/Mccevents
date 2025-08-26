@@ -1,6 +1,14 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # ✅ Allow existing files (like try.php) to run directly
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # ✅ Allow existing folders
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # 🚀 Otherwise, send everything to Laravel
     RewriteRule ^ index.php [L]
 </IfModule>
