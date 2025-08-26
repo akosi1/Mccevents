@@ -11,19 +11,16 @@ $mysqli = new mysqli($host, $username, $password, $dbname, $port);
 // Check connection
 if ($mysqli->connect_error) {
     die('Connection failed: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
-} else {
-    echo "Connection successful!";
-}
+} 
 
-// Optionally run a simple query if connection is successful
-if (!$mysqli->connect_error) {
-    $result = $mysqli->query("SELECT 1");
-    if ($result) {
-        echo "\nQuery successful!";
-        $result->close();
-    } else {
-        echo "\nQuery failed: " . $mysqli->error;
-    }
+echo "Connection successful!\n";
+
+// Run a simple test query
+if ($result = $mysqli->query("SELECT 1")) {
+    echo "Test query executed successfully.";
+    $result->close();
+} else {
+    echo "Test query failed: " . $mysqli->error;
 }
 
 $mysqli->close();
