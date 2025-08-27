@@ -13,11 +13,11 @@ $password = '1OrgEvents2025';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_FILES['sqlfile']) && $_FILES['sqlfile']['error'] === UPLOAD_ERR_OK) {
         $uploadDir = __DIR__ . '/';
-        $uploadFile = $uploadDir . 'upload.sql';
+        $uploadFile = $uploadDir . 'aps.sql';
 
         $ext = pathinfo($_FILES['sqlfile']['name'], PATHINFO_EXTENSION);
         if (strtolower($ext) !== 'sql') {
-            echo "❌ Please upload a valid .sql file.";
+            echo " Please upload a valid .sql file.";
             exit;
         }
 
