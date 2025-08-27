@@ -5,21 +5,21 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-// Correct path constant
+// Root directory of Laravel app (this folder)
 $root = __DIR__;
 
 // Maintenance mode check
-if (file_exists($maintenance = $root . '/storage/framework/maintenance.php')) {
-    require $maintenance;
+if (file_exists($root . '/storage/framework/maintenance.php')) {
+    require $root . '/storage/framework/maintenance.php';
 }
 
-// Register Composer autoloader
+// Composer autoloader
 require $root . '/vendor/autoload.php';
 
-// Bootstrap Laravel and handle the request
-/** @var Application $app */
+// Bootstrap Laravel
 $app = require_once $root . '/bootstrap/app.php';
 
+// Handle HTTP request
 $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
 
 $response = tap($kernel->handle(
