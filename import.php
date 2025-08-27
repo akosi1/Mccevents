@@ -2,44 +2,41 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_FILES['sqlfile']) && $_FILES['sqlfile']['error'] === UPLOAD_ERR_OK) {
+        $uploadDir = __DIR__ . '/';
+        $uploadFile = $uploadDir . 'event.sql';
 
-$host = 'localhost';
-$dbname = 'u802714156_events';
-$username = 'u802714156_eventsOrgPass';
-$password = '1OrgEvents2025';
-
-// $sqlFilePath = __DIR__ . '/event.sql'; 
-// echo "Looking for file at: " . __DIR__ . '/event.sql';
-$sqlFilePath = __DIR__ . '/event.sql'; 
-
-
-$conn = new mysqli($host, $username, $password, $dbname);
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-
-$sql = file_get_contents($sqlFilePath);
-if ($sql === false) {
-    die("Failed to read SQL file.");
-}
-
-$queries = array_filter(array_map('trim', explode(";", $sql)));
-$success = 0;
-$fail = 0;
-foreach ($queries as $query) {
-    if (!empty($query)) {
-        if ($conn->query($query) === TRUE) {
-            $success++;
-        } else {
-            echo "Error on query: $query<br>Error: " . $conn->error . "<br><br>";
-            $fail++;
+        // Check file extension
+        $ext = pathinfo($_FILES['sqlfile']['name'], PATHINFO_EXTENSION);
+        if (strtolower($ext) !== 'sql') {
+            echo " Please upload a .sql file only.";
+            exit;
         }
-    }
-}
-$conn->close();
 
-echo " Import completed.<br>";
-echo "Successful queries: $success<br>";
-echo "Failed queries: $fail<br>";
+        if (move_uploaded_file($_FILES['sqlfile']['tmp_name'], $uploadFile)) {
+            echo " File uploaded successfully to: " . htmlspecialchars($uploadFile);
+        } else {
+            echo " Failed to move uploaded file.";
+        }
+    } else {
+        echo "❌ No file uploaded or upload error.";
+    }
+    exit;
+}
 ?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Upload SQL File</title>
+</head>
+<body>
+<h2>Upload your event.sql file</h2>
+<form action="" method="post" enctype="multipart/form-data">
+    <input type="file" name="sqlfile" accept=".sql" required />
+    <button type="submit">Upload</button>
+</form>
+</body>
+</html>
