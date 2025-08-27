@@ -1,6 +1,6 @@
 <?php
 
-$host = '127.0.0.1:3306';
+$host = '127.0.0.1:3307';
 $dbname = 'u802714156_events';
 $username = 'u802714156_eventsOrgPass';
 $password = '1OrgEvents2025';
