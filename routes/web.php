@@ -39,37 +39,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/leave', [EventJoinController::class, 'leave'])->name('leave');
     });
 });
-Route::get('/show-log', function () {
-    $logFile = storage_path('logs/laravel.log');
-
-    if (!file_exists($logFile)) {
-        return 'Log file does not exist.';
-    }
-
-    // Get last 100 lines of the log file to avoid memory issues
-    $lines = [];
-    $file = new SplFileObject($logFile, 'r');
-    $file->seek(PHP_INT_MAX);
-    $lastLine = $file->key();
-
-    $start = max(0, $lastLine - 100);
-    for ($i = $start; $i <= $lastLine; $i++) {
-        $file->seek($i);
-        $lines[] = htmlspecialchars($file->current());
-    }
-
-    return '<pre>' . implode('', $lines) . '</pre>';
-});
-// Route::get('/show-log', function () {
-//     $logFile = storage_path('logs/laravel.log');
-
-//     if (!file_exists($logFile)) {
-//         return 'Log file does not exist.';
-//     }
-
-//     return nl2br(file_get_contents($logFile));
-// });
-
 
 // Auth routes (login, register, etc.)
 require __DIR__.'/auth.php';
