@@ -13,7 +13,7 @@ return [
 
 
 
-    'url' => env('APP_URL', 'https://events-org.com'),
+    'url' => env('APP_URL', 'http://localhost'),
 
 
     'timezone' => 'UTC',
