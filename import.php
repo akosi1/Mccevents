@@ -3,7 +3,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 
-$host = '127.0.0.1:3307';
+$host = 'localhost';
 $dbname = 'u802714156_events';
 $username = 'u802714156_eventsOrgPass';
 $password = '1OrgEvents2025';
