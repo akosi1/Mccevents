@@ -1,4 +1,0 @@
-PS C:\xampp\htdocs\eventaps> mysql -u root -e "CREATE DATABASE event;"
->>
-ERROR 1007 (HY000) at line 1: Can't create database 'event'; database existsUser-agent: *
-Disallow:
