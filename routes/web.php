@@ -14,14 +14,14 @@ use App\Http\Controllers\DashboardController;
 |
 */
 // Redirect /index.php to /
-Route::get('/index.php', function () {
-    return redirect('/');
-});
+//Route::get('/index.php', function () {
+   // return redirect('/');
+//});
 
 // Homepage
- //Route::get('/', function () {
-    //return view('welcome');
-//});
+ Route::get('/', function () {
+    return view('welcome');
+});
 
 // Routes that require login + email verification
 Route::middleware(['auth', 'verified'])->group(function () {
