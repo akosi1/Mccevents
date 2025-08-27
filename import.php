@@ -1,6 +1,8 @@
 <?php
-error_reporting(E_ALL);
 ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_FILES['sqlfile']) && $_FILES['sqlfile']['error'] === UPLOAD_ERR_OK) {
@@ -8,9 +10,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $uploadFile = $uploadDir . 'event.sql';
 
         // Check file extension
-        $ext = pathinfo($_FILES['sqlfile']['name'], PATHINFO_EXTENSION);
+        $ext = pathinfo($_FILES['sqlfile']['name'], PATHINFO_EXTENSION); 
         if (strtolower($ext) !== 'sql') {
-            echo " Please upload a .sql file only.";
+            echo " Please upload a .sql file only."; 
             exit;
         }
 
