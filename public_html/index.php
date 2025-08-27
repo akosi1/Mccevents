@@ -5,25 +5,16 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-// Root directory is one level above public_html
-$root = dirname(__DIR__); 
-
-// Maintenance mode check
-if (file_exists($root . '/storage/framework/maintenance.php')) {
-    require $root . '/storage/framework/maintenance.php';
+// Determine if the application is in maintenance mode...
+if (file_exists($maintenance = _DIR_.'/../storage/framework/maintenance.php')) {
+    require $maintenance;
 }
 
-// Composer autoloader
-require $root . '/vendor/autoload.php';
+// Register the Composer autoloader...  
+require _DIR_.'/../vendor/autoload.php';
 
-// Bootstrap Laravel
-$app = require_once $root . '/bootstrap/app.php';
+// Bootstrap Laravel and handle the request...
+/** @var Application $app */
+$app = require_once _DIR_.'/../bootstrap/app.php';
 
-// Handle HTTP request
-$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
-
-$response = tap($kernel->handle(
-    $request = Request::capture()
-))->send();
-
-$kernel->terminate($request, $response);
+$app->handleRequest(Request::capture());
