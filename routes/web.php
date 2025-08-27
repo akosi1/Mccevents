@@ -4,18 +4,17 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\EventJoinController;
 use App\Http\Controllers\DashboardController;
-use SplFileObject;
 
 /*
-|----------------------------------------------------------------------
+|--------------------------------------------------------------------------
 | Web Routes
-|----------------------------------------------------------------------
+|--------------------------------------------------------------------------
 |
 | Here is where you can register web routes for your application.
 |
 */
 
-// Homepage route
+// Homepage
 Route::get('/', function () {
     return view('welcome');
 });
@@ -23,8 +22,9 @@ Route::get('/', function () {
 // Routes that require login + email verification
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    // Dashboard route
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->name('dashboard');
 
     // Profile routes
     Route::prefix('profile')->name('profile.')->group(function () {
@@ -39,8 +39,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/leave', [EventJoinController::class, 'leave'])->name('leave');
     });
 });
-
-// Show last 100 lines of the Laravel log
 Route::get('/show-log', function () {
     $logFile = storage_path('logs/laravel.log');
 
@@ -48,7 +46,7 @@ Route::get('/show-log', function () {
         return 'Log file does not exist.';
     }
 
-    // Read last 100 lines of the log file to avoid memory issues
+    // Get last 100 lines of the log file to avoid memory issues
     $lines = [];
     $file = new SplFileObject($logFile, 'r');
     $file->seek(PHP_INT_MAX);
@@ -57,25 +55,21 @@ Route::get('/show-log', function () {
     $start = max(0, $lastLine - 100);
     for ($i = $start; $i <= $lastLine; $i++) {
         $file->seek($i);
-        $lines[] = htmlspecialchars($file->current()); // Escaping HTML for security
+        $lines[] = htmlspecialchars($file->current());
     }
 
     return '<pre>' . implode('', $lines) . '</pre>';
 });
+// Route::get('/show-log', function () {
+//     $logFile = storage_path('logs/laravel.log');
 
-// Alternative route to show last 100 lines (could be removed if not needed)
-Route::get('view-logs', function () {
-    $logFile = storage_path('logs/laravel.log');
+//     if (!file_exists($logFile)) {
+//         return 'Log file does not exist.';
+//     }
 
-    if (file_exists($logFile)) {
-        // Read last 100 lines of the log file
-        $logs = array_slice(file($logFile), -100);
+//     return nl2br(file_get_contents($logFile));
+// });
 
-        // Return the logs as a string with line breaks
-        return nl2br(implode('', $logs));
-    } else {
-        return "Log file does not exist.";
-    }
-});
 
+// Auth routes (login, register, etc.)
 require __DIR__.'/auth.php';
