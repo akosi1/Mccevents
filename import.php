@@ -40,27 +40,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Split and run queries
-        $queries = array_filter(array_map('trim', explode(';', $sql)));
-        $success = 0;
-        $fail = 0;
-
-        foreach ($queries as $query) {
-            if (!empty($query)) {
-                if ($conn->query($query) === TRUE) {
-                    $success++;
-                } else {
-                    echo " Error in query:<br><pre>$query</pre><br>MySQL Error: " . $conn->error . "<br><br>";
-                    $fail++;
-                }
-            }
+      
+       if ($conn->multi_query($sql)) {
+    $success = 0;
+    $fail = 0;
+    do {
+        if ($result = $conn->store_result()) {
+            $result->free();
         }
+        if ($conn->errno) {
+            echo "Error in query: " . $conn->error . "<br><br>";
+            $fail++;
+        } else {
+            $success++;
+        }
+    } while ($conn->more_results() && $conn->next_result());
 
-        $conn->close();
-        echo "<hr> Import finished.<br>";
-        echo " Successful queries: $success<br>";
-        echo " Failed queries: $fail<br>";
-    } else {
-        echo " No file uploaded or upload error.";
+    echo "<hr> Import finished.<br>";
+    echo " Successful queries: $success<br>";
+    echo " Failed queries: $fail<br>";
+} else {
+    echo "Error executing SQL file: " . $conn->error;
+}
     }
     exit;
 }
