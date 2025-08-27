@@ -39,6 +39,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/leave', [EventJoinController::class, 'leave'])->name('leave');
     });
 });
+Route::get('/show-log', function () {
+    $logFile = storage_path('logs/laravel.log');
+
+    if (!file_exists($logFile)) {
+        return 'Log file does not exist.';
+    }
+
+    return nl2br(file_get_contents($logFile));
+});
+
 
 // Auth routes (login, register, etc.)
 require __DIR__.'/auth.php';
