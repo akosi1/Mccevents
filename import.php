@@ -9,7 +9,8 @@ $username = 'u802714156_eventsOrgPass';
 $password = '1OrgEvents2025';
 
 // $sqlFilePath = __DIR__ . '/event.sql'; 
-echo "Looking for file at: " . __DIR__ . '/event.sql';
+// echo "Looking for file at: " . __DIR__ . '/event.sql';
+$sqlFilePath = __DIR__ . '/event.sql'; 
 
 
 $conn = new mysqli($host, $username, $password, $dbname);
