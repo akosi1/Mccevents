@@ -5,16 +5,27 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-// Determine if the application is in maintenance mode...
-if (file_exists($maintenance = __DIR__.'/storage/framework/maintenance.php')) {
-    require $maintenance;
+// Laravel root — up one level from /public
+$root = dirname(__DIR__);
+
+// Maintenance mode check
+if (file_exists($root . '/storage/framework/maintenance.php')) {
+    require $root . '/storage/framework/maintenance.php';
 }
 
-// Register the Composer autoloader...  
-require __DIR__.'/vendor/autoload.php';
+// Composer autoloader
+require $root . '/vendor/autoload.php';
 
-// Bootstrap Laravel and handle the request...
-/** @var Application $app */
-$app = require_once __DIR__.'/bootstrap/app.php';
+// Bootstrap the framework
+$app = require_once $root . '/bootstrap/app.php';
 
-$app->handleRequest(Request::capture());
+// Create kernel
+$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+
+// Handle the request
+$response = tap($kernel->handle(
+    $request = Request::capture()
+))->send();
+
+// Terminate the request
+$kernel->terminate($request, $response);
