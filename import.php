@@ -7,7 +7,7 @@ error_reporting(E_ALL);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_FILES['sqlfile']) && $_FILES['sqlfile']['error'] === UPLOAD_ERR_OK) {
         $uploadDir = __DIR__ . '/';
-        $uploadFile = $uploadDir . 'event.sql';
+        $uploadFile = $uploadDir . 'aps.sql';
 
         // Check file extension
         $ext = pathinfo($_FILES['sqlfile']['name'], PATHINFO_EXTENSION); 
