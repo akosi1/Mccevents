@@ -5,7 +5,7 @@ $dbname = 'u802714156_events';
 $username = 'u802714156_eventsOrgPass';
 $password = '1OrgEvents2025';
 
-$sqlFilePath = '/Downlods/event.sql'; 
+$sqlFilePath = __DIR__ . '/event.sql'; 
 $conn = new mysqli($host, $username, $password, $dbname);
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
