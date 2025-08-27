@@ -1,11 +1,5 @@
-# Forward all traffic into the /public folder (Laravel entry point)
+RewriteEngine On
 
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-
-    # If request is not already pointing to /public
-    RewriteCond %{REQUEST_URI} !^/public/
-    RewriteRule ^(.*)$ public/$1 [L]
-
-    DirectoryIndex public/index.php
-</IfModule>
+# Redirect everything to public/
+RewriteCond %{REQUEST_URI} !^/public
+RewriteRule ^(.*)$ public/$1 [L]
