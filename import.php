@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo " Failed to move uploaded file.";
         }
     } else {
-        echo "❌ No file uploaded or upload error.";
+        echo " No file uploaded or upload error.";
     }
     exit;
 }
