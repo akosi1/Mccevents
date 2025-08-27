@@ -1,7 +1,6 @@
-# Enable RewriteEngine
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Redirect all traffic to the index.php inside public
+    # Redirect all traffic to the index.php inside the public directory
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
