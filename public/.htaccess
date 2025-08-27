@@ -1,6 +1,6 @@
 <IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule ^ index.php [L]
+    RewriteEngine On
+
+    # Redirect all traffic to the index.php inside public
+    RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
