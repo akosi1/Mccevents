@@ -1,20 +1,25 @@
 <?php
 
 use Illuminate\Foundation\Application;
-use Illuminate\Http\Request;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
 
-define('LARAVEL_START', microtime(true));
-
-// Determine if the application is in maintenance mode...
-if (file_exists($maintenance = _DIR_.'/../storage/framework/maintenance.php')) {
-    require $maintenance;
-}
-
-// Register the Composer autoloader...  
-require _DIR_.'/../vendor/autoload.php';
-
-// Bootstrap Laravel and handle the request...
-/** @var Application $app */
-$app = require_once _DIR_.'/../bootstrap/app.php';
-
-$app->handleRequest(Request::capture());
+return Application::configure(basePath: dirname(_DIR_))
+    ->withRouting(
+        web: _DIR_.'/../routes/web.php',
+        commands: _DIR_.'/../routes/console.php',
+        health: '/up',
+        then: function () {
+            Route::middleware('web')
+                ->prefix('admin')
+                ->group(base_path('routes/admin.php'));
+        },
+    )
+    ->withMiddleware(function (Middleware $middleware) {
+        $middleware->alias([
+            'admin' => \App\Http\Middleware\IsAdmin::class,
+        ]);
+    })
+    ->withExceptions(function (Exceptions $exceptions) {
+        //
+    })->create();
