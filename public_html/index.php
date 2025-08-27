@@ -6,7 +6,8 @@ use Illuminate\Http\Request;
 define('LARAVEL_START', microtime(true));
 
 // Laravel root — up one level from /public
-$root = dirname(__DIR__);
+$root = __DIR__;
+
 
 // Maintenance mode check
 if (file_exists($root . '/storage/framework/maintenance.php')) {
