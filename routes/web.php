@@ -13,9 +13,13 @@ use App\Http\Controllers\DashboardController;
 | Here is where you can register web routes for your application.
 |
 */
+// Redirect /index.php to /
+//Route::get('/index.php', function () {
+   // return redirect('/');
+//});
 
 // Homepage
-Route::get('/', function () {
+ Route::get('/', function () {
     return view('welcome');
 });
 
