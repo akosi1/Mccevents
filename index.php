@@ -4,4 +4,4 @@
 // error_reporting(E_ALL);
 
 // Forward all traffic to Laravel's real entry point
-require __DIR__ . '/public/index.php';
+require __DIR__ . '/../public/index.php';
