@@ -5,8 +5,12 @@
 
     RewriteEngine On
 
-    # Redirect to public if user tries root
-    RewriteCond %{REQUEST_FILENAME} !-d
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Redirect requests to index.php
     RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.php [L]
 </IfModule>
