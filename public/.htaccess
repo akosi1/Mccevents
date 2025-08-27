@@ -1,10 +1,10 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Ensure we're in the correct directory
+    # Ensure we're in the public folder
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
 
-    # Redirect all requests to the index.php in public
-    RewriteRule ^(.*)$ public/$1 [L]
+    # Redirect all requests to index.php
+    RewriteRule ^ index.php [L]
 </IfModule>
