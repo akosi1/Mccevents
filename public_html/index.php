@@ -5,7 +5,7 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-// Root directory of Laravel app (one level above public_html)
+// Define root directory as parent of public_html
 $root = dirname(__DIR__);
 
 // Maintenance mode check
@@ -14,7 +14,7 @@ if (file_exists($root . '/storage/framework/maintenance.php')) {
 }
 
 // Composer autoloader
-require $root . '/../vendor/autoload.php';
+require $root . '/vendor/autoload.php';
 
 // Bootstrap Laravel
 $app = require_once $root . '/bootstrap/app.php';
