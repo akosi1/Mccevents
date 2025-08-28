@@ -1,48 +1,30 @@
+
+You sent
 <?php
+    use Illuminate\Support\Facades\Route;
+    use App\Http\Controllers\{ProfileController, EventJoinController, DashboardController};
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\EventJoinController;
-use App\Http\Controllers\DashboardController;
+    Route::get('/', fn() => view('welcome'));
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application.
-|
-*/
-// Redirect /index.php to /
-//Route::get('/index.php', function () {
-   // return redirect('/');
-//});
-
-// Homepage
- Route::get('/', function () {
-    return view('welcome');
-});
-
-// Routes that require login + email verification
-Route::middleware(['auth', 'verified'])->group(function () {
-
-    // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])
-        ->name('dashboard');
-
-    // Profile routes
-    Route::prefix('profile')->name('profile.')->group(function () {
-        Route::get('/', [ProfileController::class, 'edit'])->name('edit');
-        Route::patch('/', [ProfileController::class, 'update'])->name('update');
-        Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
+    Route::middleware(['auth', 'verified'])->group(function () {
+        // Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        
+        // Profile routes
+        Route::prefix('profile')->name('profile.')->group(function () {
+            Route::get('/', [ProfileController::class, 'edit'])->name('edit');
+            Route::patch('/', [ProfileController::class, 'update'])->name('update');
+            Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
+        });
+        
+        // Event join/leave routes
+        Route::prefix('events/{event}')->name('events.')->group(function () {
+            Route::post('join', [EventJoinController::class, 'join'])->name('join');
+            Route::delete('leave', [EventJoinController::class, 'leave'])->name('leave');
+        });
     });
 
-    // Event join/leave routes
-    Route::prefix('events/{event}')->name('events.')->group(function () {
-        Route::post('/join', [EventJoinController::class, 'join'])->name('join');
-        Route::delete('/leave', [EventJoinController::class, 'leave'])->name('leave');
-    });
-});
+    require _DIR_.'/auth.php';  
 
-// Auth routes (login, register, etc.)
-require __DIR__.'/auth.php';
+
+Web.php routes
