@@ -24,7 +24,6 @@ You sent
         });
     });
 
-    require _DIR_.'/auth.php';  
+    require __DIR__.'/auth.php';  
 
-
-Web.php routes
+;
