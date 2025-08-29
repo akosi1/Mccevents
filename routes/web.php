@@ -1,5 +1,3 @@
-
-You sent
 <?php
     use Illuminate\Support\Facades\Route;
     use App\Http\Controllers\{ProfileController, EventJoinController, DashboardController};
