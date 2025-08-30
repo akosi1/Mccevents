@@ -9,8 +9,15 @@ return new class extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->enum('role', ['admin', 'user'])->default('user');
-            $table->enum('status', ['active', 'inactive'])->default('active');
+            // Add 'role' column if it doesn't exist
+            if (!Schema::hasColumn('users', 'role')) {
+                $table->enum('role', ['admin', 'user'])->default('user')->after('email');
+            }
+
+            // Add 'status' column if it doesn't exist
+            if (!Schema::hasColumn('users', 'status')) {
+                $table->enum('status', ['active', 'inactive'])->default('active')->after('role');
+            }
         });
     }
 
